@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { ThemeProvider } from 'next-themes';
 import { Toaster } from 'sonner';
 import { Inter } from 'next/font/google';
+import { Providers } from '@/components/shared/Providers';
 import { Strings } from '@/constants/strings';
 import './globals.css';
 
@@ -36,7 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="es" suppressHydrationWarning className={inter.variable}>
       <body className="bg-background text-foreground min-h-dvh antialiased">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          {children}
+          <Providers>{children}</Providers>
           <Toaster position="top-center" richColors />
         </ThemeProvider>
       </body>
