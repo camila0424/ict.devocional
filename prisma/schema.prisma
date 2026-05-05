@@ -1,0 +1,157 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Usuario ─────────────────────────────────────────────
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String   @map("password_hash")
+  avatarUrl    String?  @map("avatar_url")
+  timezone     String   @default("Europe/Madrid")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  responses DevotionalResponse[]
+  progress  UserProgress[]
+  streak    Streak?
+  reminder  Reminder?
+  pushSubs  PushSubscription[]
+
+  @@map("users")
+}
+
+// ── Plan devocional (mensual) ────────────────────────────
+model DevotionalPlan {
+  id        String   @id @default(cuid())
+  month     Int
+  year      Int
+  title     String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  entries DailyEntry[]
+
+  @@unique([month, year])
+  @@map("devotional_plans")
+}
+
+// ── Día del plan (3 lecturas + estructura para 8 secciones)
+model DailyEntry {
+  id          String   @id @default(cuid())
+  planId      String   @map("plan_id")
+  dayNumber   Int      @map("day_number")
+  date        DateTime @db.Date
+  rawReadings String   @map("raw_readings")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  plan      DevotionalPlan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+  readings  Reading[]
+  responses DevotionalResponse[]
+
+  @@unique([planId, dayNumber])
+  @@index([date])
+  @@map("daily_entries")
+}
+
+// ── Lectura individual (3 por día) ───────────────────────
+model Reading {
+  id           String @id @default(cuid())
+  dailyEntryId String @map("daily_entry_id")
+  order        Int
+  bookAbbr     String @map("book_abbr")
+  bookFull     String @map("book_full")
+  reference    String
+
+  dailyEntry DailyEntry @relation(fields: [dailyEntryId], references: [id], onDelete: Cascade)
+
+  @@map("readings")
+}
+
+// ── Respuesta del usuario al modelo de 8 secciones ──────
+model DevotionalResponse {
+  id             String    @id @default(cuid())
+  userId         String    @map("user_id")
+  dailyEntryId   String    @map("daily_entry_id")
+  message        String?   @db.Text
+  promise        String?   @db.Text
+  commandment    String?   @db.Text
+  wrongAttitudes String?   @db.Text @map("wrong_attitudes")
+  teotherapy     String?   @db.Text
+  petition       String?   @db.Text
+  gratitude      String?   @db.Text
+  pending        String?   @db.Text
+  completedAt    DateTime? @map("completed_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dailyEntry DailyEntry @relation(fields: [dailyEntryId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, dailyEntryId])
+  @@map("devotional_responses")
+}
+
+// ── Progreso por día ─────────────────────────────────────
+model UserProgress {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  date      DateTime @db.Date
+  completed Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId, date])
+  @@map("user_progress")
+}
+
+// ── Racha del usuario ────────────────────────────────────
+model Streak {
+  id              String    @id @default(cuid())
+  userId          String    @unique @map("user_id")
+  current         Int       @default(0)
+  best            Int       @default(0)
+  lastCompletedAt DateTime? @map("last_completed_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("streaks")
+}
+
+// ── Recordatorio diario ──────────────────────────────────
+model Reminder {
+  id        String   @id @default(cuid())
+  userId    String   @unique @map("user_id")
+  hour      Int
+  minute    Int
+  enabled   Boolean  @default(true)
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("reminders")
+}
+
+// ── Suscripción Web Push ─────────────────────────────────
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  endpoint  String   @db.Text
+  p256dh    String   @db.Text
+  auth      String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, endpoint(length: 500)])
+  @@map("push_subscriptions")
+}

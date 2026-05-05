@@ -1,0 +1,93 @@
+@import 'tailwindcss';
+
+@theme {
+  /* ── Colores base ICT ─────────────────────────────────── */
+  --color-primary: #1e40af;
+  --color-primary-dark: #1e3a8a;
+  --color-primary-light: #dbeafe;
+  --color-accent: #f97316;
+  --color-star: #eab308;
+  --color-success: #22c55e;
+  --color-error: #ef4444;
+
+  /* ── Tipografía ────────────────────────────────────────── */
+  --font-display: 'Inter', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+
+  /* ── Animaciones ─────────────────────────────────────── */
+  --animate-flame: flame 1.5s ease-in-out infinite;
+  --animate-pulse-glow: pulse-glow 2s ease-in-out infinite;
+  --animate-bounce-soft: bounce-soft 0.6s ease-out;
+
+  @keyframes flame {
+    0%,
+    100% {
+      transform: scale(1) rotate(-2deg);
+    }
+    50% {
+      transform: scale(1.1) rotate(2deg);
+    }
+  }
+  @keyframes pulse-glow {
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.4);
+    }
+    50% {
+      box-shadow: 0 0 0 16px rgba(249, 115, 22, 0);
+    }
+  }
+  @keyframes bounce-soft {
+    0% {
+      transform: scale(0.8);
+      opacity: 0;
+    }
+    60% {
+      transform: scale(1.05);
+      opacity: 1;
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+}
+
+/* ── Variables semánticas (light + dark) ──────────────── */
+:root {
+  --background: #ffffff;
+  --surface: #f8faff;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --border: #e2e8f0;
+}
+
+.dark {
+  --background: #0f172a;
+  --surface: #1e293b;
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --border: #334155;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-foreground: var(--text-primary);
+  --color-muted: var(--text-secondary);
+  --color-border: var(--border);
+}
+
+body {
+  background: var(--background);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+::-webkit-scrollbar {
+  display: none;
+}
+* {
+  scrollbar-width: none;
+}
