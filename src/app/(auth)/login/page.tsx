@@ -54,9 +54,12 @@ export default function LoginPage() {
       className="w-full"
     >
       <div className="mb-8 flex flex-col items-center gap-2">
-        <div className="text-5xl" style={{ animation: 'var(--animate-flame)' }}>
-          🔥
-        </div>
+        <img
+          src="/icons/android-chrome-192x192.png"
+          width={80}
+          height={80}
+          className="mx-auto mb-4 rounded-2xl"
+        />
         <h1 className="text-2xl font-bold text-[var(--color-primary)]">
           {Strings.auth.loginTitle}
         </h1>

@@ -82,7 +82,7 @@ function ReadingItem({ reading }: { reading: Reading }) {
     }
     setStatus('loading');
     try {
-      const result = await fetchBibleText(reading.bookFull, reading.reference);
+      const result = await fetchBibleText(`${reading.bookFull} ${reading.reference}`);
       setText(result.text);
       setStatus('open');
     } catch {
