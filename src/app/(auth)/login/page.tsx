@@ -55,7 +55,7 @@ export default function LoginPage() {
     >
       <div className="mb-8 flex flex-col items-center gap-2">
         <img
-          src="/icons/android-chrome-192x192.png"
+          src="/icons/icon-192.png"
           width={80}
           height={80}
           className="mx-auto mb-4 rounded-2xl"
