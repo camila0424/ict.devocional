@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { motion } from 'motion/react';
 import { ChevronRight, Trophy } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { LevelCard } from '@/components/ui/LevelCard';
 
 type Props = {
   userName: string;
@@ -13,6 +14,7 @@ type Props = {
   streak: { current: number; best: number };
   todayCompleted: boolean;
   completedDays: number[];
+  totalCompleted: number;
 };
 
 const DAYS_IN_MAY = 31;
@@ -20,7 +22,14 @@ const WEEK_LABELS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 // 1 May 2026 = Friday → offset 4 (L=0)
 const MAY_2026_OFFSET = 4;
 
-export function HomeClient({ userName, day, streak, todayCompleted, completedDays }: Props) {
+export function HomeClient({
+  userName,
+  day,
+  streak,
+  todayCompleted,
+  completedDays,
+  totalCompleted,
+}: Props) {
   const days = Array.from({ length: DAYS_IN_MAY }, (_, i) => i + 1);
 
   return (
@@ -62,6 +71,9 @@ export function HomeClient({ userName, day, streak, todayCompleted, completedDay
           </div>
         </div>
       </motion.div>
+
+      {/* Nivel card */}
+      <LevelCard totalDays={totalCompleted} />
 
       {/* CTA devocional */}
       <motion.div

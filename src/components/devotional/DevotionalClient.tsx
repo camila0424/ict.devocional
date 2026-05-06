@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
-import { ArrowLeft, CheckCircle2, BookOpen } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, BookOpen, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Strings } from '@/constants/strings';
@@ -62,6 +62,7 @@ export function DevotionalClient({ entry, initialResponse }: Props) {
   const [responses, setResponses] = useState<ResponseState>(initialResponse ?? EMPTY_RESPONSE);
   const [saving, setSaving] = useState(false);
   const [celebrated, setCelebrated] = useState(!!initialResponse?.completedAt);
+  const [showBibleBanner, setShowBibleBanner] = useState(true);
 
   const sectionKeys = SECTIONS.map((s) => s.key);
   const filledCount = sectionKeys.filter((k) => responses[k].trim().length > 0).length;
@@ -125,6 +126,22 @@ export function DevotionalClient({ entry, initialResponse }: Props) {
       </div>
 
       <div className="flex flex-col gap-4 p-4 pb-10">
+        {/* Banner Biblia física */}
+        {showBibleBanner && (
+          <div className="flex items-start gap-3 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 dark:border-blue-800 dark:bg-blue-950/40">
+            <p className="flex-1 text-xs leading-relaxed text-blue-700 dark:text-blue-300">
+              📖 ¿Tienes tu Biblia física a mano? Te invitamos a leerla en lugar de la pantalla.
+            </p>
+            <button
+              onClick={() => setShowBibleBanner(false)}
+              aria-label="Cerrar"
+              className="shrink-0 text-blue-400 transition-colors hover:text-blue-600"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        )}
+
         {/* Lecturas */}
         <div className="border-border bg-surface rounded-2xl border p-4">
           <div className="mb-3 flex items-center gap-2">

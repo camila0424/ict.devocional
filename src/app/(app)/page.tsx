@@ -10,7 +10,7 @@ async function getHomeData(userId: string) {
   const year = now.getFullYear();
   const day = now.getDate();
 
-  const [streakRaw, todayEntry, progressRows] = await Promise.all([
+  const [streakRaw, todayEntry, progressRows, totalCompleted] = await Promise.all([
     prisma.streak.findUnique({ where: { userId } }),
     prisma.dailyEntry.findFirst({
       where: { plan: { month, year }, dayNumber: day },
@@ -19,6 +19,9 @@ async function getHomeData(userId: string) {
     prisma.userProgress.findMany({
       where: { userId, date: { gte: new Date(year, month - 1, 1) } },
       select: { date: true, completed: true },
+    }),
+    prisma.userProgress.count({
+      where: { userId, completed: true },
     }),
   ]);
 
@@ -34,7 +37,7 @@ async function getHomeData(userId: string) {
     .filter((p) => p.completed)
     .map((p) => new Date(p.date).getDate());
 
-  return { streak, day, todayCompleted, completedDays, month, year };
+  return { streak, day, todayCompleted, completedDays, month, year, totalCompleted };
 }
 
 export default async function HomePage() {
