@@ -105,17 +105,17 @@ export function HomeClient({
       </motion.div>
 
       {/* Misión de Mayo */}
-      {missionText && (
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25, duration: 0.3 }}
-          className="border-border bg-surface rounded-2xl border p-4"
-        >
-          <h2 className="mb-2 font-bold">🎯 Misión de Mayo</h2>
-          <p className="text-sm leading-relaxed">{missionText}</p>
-        </motion.div>
-      )}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.25, duration: 0.3 }}
+        className="rounded-2xl border border-blue-200 bg-blue-50 p-4"
+      >
+        <h2 className="mb-2 font-bold text-blue-900">🎯 Misión de Mayo</h2>
+        <p className="text-sm leading-relaxed text-gray-600">
+          {missionText || '🙏 La misión de este mes estará disponible pronto. ¡Mantente atento!'}
+        </p>
+      </motion.div>
 
       {/* Calendario Mayo */}
       <motion.div
