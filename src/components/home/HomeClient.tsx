@@ -15,6 +15,7 @@ type Props = {
   todayCompleted: boolean;
   completedDays: number[];
   totalCompleted: number;
+  missionText?: string | null;
 };
 
 const DAYS_IN_MAY = 31;
@@ -29,6 +30,7 @@ export function HomeClient({
   todayCompleted,
   completedDays,
   totalCompleted,
+  missionText,
 }: Props) {
   const days = Array.from({ length: DAYS_IN_MAY }, (_, i) => i + 1);
 
@@ -101,6 +103,19 @@ export function HomeClient({
           </motion.div>
         </Link>
       </motion.div>
+
+      {/* Misión de Mayo */}
+      {missionText && (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25, duration: 0.3 }}
+          className="border-border bg-surface rounded-2xl border p-4"
+        >
+          <h2 className="mb-2 font-bold">🎯 Misión de Mayo</h2>
+          <p className="text-sm leading-relaxed">{missionText}</p>
+        </motion.div>
+      )}
 
       {/* Calendario Mayo */}
       <motion.div

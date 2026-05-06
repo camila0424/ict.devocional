@@ -25,6 +25,7 @@ export type DailyEntryData = {
   rawReadings: string;
   readings: ReadingData[];
   response: ResponseData | null;
+  missionText: string | null;
 };
 
 export const SECTION_KEYS = [

@@ -21,6 +21,7 @@ export async function GET(): Promise<NextResponse<ApiResponse<DailyEntryData | n
   const entry = await prisma.dailyEntry.findFirst({
     where: { plan: { month, year }, dayNumber: day },
     include: {
+      plan: { select: { missionText: true } },
       readings: { orderBy: { order: 'asc' } },
       responses: { where: { userId: session.user.id } },
     },
@@ -40,6 +41,7 @@ export async function GET(): Promise<NextResponse<ApiResponse<DailyEntryData | n
       date: entry.date,
       rawReadings: entry.rawReadings,
       readings: entry.readings,
+      missionText: entry.plan.missionText ?? null,
       response: response
         ? {
             message: response.message,

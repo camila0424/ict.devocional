@@ -3,7 +3,16 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
-import { ArrowLeft, CheckCircle2, BookOpen, X } from 'lucide-react';
+import {
+  ArrowLeft,
+  CheckCircle2,
+  BookOpen,
+  X,
+  ChevronDown,
+  ChevronUp,
+  Loader2,
+} from 'lucide-react';
+import { fetchBibleText } from '@/lib/bible-api';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Strings } from '@/constants/strings';
@@ -54,6 +63,85 @@ const EMPTY_RESPONSE: ResponseState = {
   pending: '',
   completedAt: null,
 };
+
+type ReadingItemState = 'idle' | 'loading' | 'open' | 'error';
+
+function ReadingItem({ reading }: { reading: Reading }) {
+  const [status, setStatus] = useState<ReadingItemState>('idle');
+  const [text, setText] = useState<string | null>(null);
+
+  async function toggle() {
+    if (status === 'loading') return;
+    if (status === 'open') {
+      setStatus('idle');
+      return;
+    }
+    if (text !== null) {
+      setStatus('open');
+      return;
+    }
+    setStatus('loading');
+    try {
+      const result = await fetchBibleText(reading.bookFull, reading.reference);
+      setText(result.text);
+      setStatus('open');
+    } catch {
+      setStatus('error');
+    }
+  }
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={toggle}
+        className="flex w-full items-center gap-3 rounded-xl bg-[var(--color-primary-light)] px-3 py-2.5 text-left transition-opacity active:opacity-70"
+      >
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary)] text-xs font-bold text-white">
+          {reading.order}
+        </span>
+        <span className="flex-1 font-semibold text-[var(--color-primary-dark)]">
+          {reading.bookFull} {reading.reference}
+        </span>
+        {status === 'loading' ? (
+          <Loader2 size={14} className="text-muted shrink-0 animate-spin" />
+        ) : status === 'open' ? (
+          <ChevronUp size={14} className="text-muted shrink-0" />
+        ) : (
+          <ChevronDown size={14} className="text-muted shrink-0" />
+        )}
+      </button>
+
+      <AnimatePresence initial={false}>
+        {status === 'open' && text && (
+          <motion.div
+            key="text"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.22 }}
+            className="overflow-hidden"
+          >
+            <p className="text-foreground px-3 pt-3 pb-2 text-sm leading-relaxed whitespace-pre-wrap">
+              {text}
+            </p>
+          </motion.div>
+        )}
+        {status === 'error' && (
+          <motion.p
+            key="error"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="px-3 pt-2 pb-1 text-xs text-red-500"
+          >
+            No se pudo cargar el texto. Toca de nuevo para reintentar.
+          </motion.p>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 type Props = { entry: EntryProps; initialResponse: ResponseState | null };
 
@@ -150,17 +238,7 @@ export function DevotionalClient({ entry, initialResponse }: Props) {
           </div>
           <div className="flex flex-col gap-2">
             {entry.readings.map((r) => (
-              <div
-                key={r.id}
-                className="flex items-center gap-3 rounded-xl bg-[var(--color-primary-light)] px-3 py-2.5"
-              >
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--color-primary)] text-xs font-bold text-white">
-                  {r.order}
-                </span>
-                <span className="font-semibold text-[var(--color-primary-dark)]">
-                  {r.bookFull} {r.reference}
-                </span>
-              </div>
+              <ReadingItem key={r.id} reading={r} />
             ))}
           </div>
         </div>

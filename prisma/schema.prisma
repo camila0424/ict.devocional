@@ -29,11 +29,12 @@ model User {
 
 // ── Plan devocional (mensual) ────────────────────────────
 model DevotionalPlan {
-  id        String   @id @default(cuid())
-  month     Int
-  year      Int
-  title     String
-  createdAt DateTime @default(now()) @map("created_at")
+  id          String   @id @default(cuid())
+  month       Int
+  year        Int
+  title       String
+  missionText String?  @map("mission_text") @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
 
   entries DailyEntry[]
 
