@@ -25,6 +25,7 @@ export async function fetchBibleText(verseRef: string): Promise<BibleTextResult>
   const match = verseRef.match(/^(.*?)\s+(\d[\d:,\-\s]*)$/);
   if (!match) throw new Error('Referencia bíblica inválida');
   const [, bookRaw, ref] = match;
+  if (!bookRaw || !ref) throw new Error('Referencia bíblica inválida');
   const book = BOOK_MAP[bookRaw.trim()] ?? bookRaw.trim().replace(/\s+/g, '+').toLowerCase();
   const slug = `${book}+${ref.trim().replace(/\s+/g, '+')}`;
   const res = await fetch(`https://bible-api.com/${slug}?translation=reinavalera1960`);
