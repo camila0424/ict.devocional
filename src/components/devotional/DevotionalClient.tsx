@@ -344,7 +344,7 @@ export function DevotionalClient({ entry, initialResponse, initialStreak }: Prop
               <ReadingItem
                 key={r.id}
                 reading={r}
-                checked={readingChecks[idx]}
+                checked={readingChecks[idx] ?? false}
                 onCheck={() => toggleReading(idx)}
               />
             ))}
