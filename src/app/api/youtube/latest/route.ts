@@ -10,13 +10,19 @@ export async function GET(request: Request) {
     const date = searchParams.get('date');
 
     const searchDate = async (targetDate: string) => {
-      // ICT publica ~5am Colombia (UTC-5). Rango amplio: medianoche UTC-6 → fin de día UTC-4
-      const publishedAfter = `${targetDate}T06:00:00Z`;
-      const publishedBefore = (() => {
+      // ICT publica la noche anterior al día que corresponde.
+      // Buscamos desde 2 días antes (00:00 UTC) hasta el día recibido (23:59 UTC).
+      const publishedAfter = (() => {
         const d = new Date(`${targetDate}T00:00:00Z`);
-        d.setDate(d.getDate() + 1);
-        return d.toISOString().replace('.000Z', 'Z').split('T')[0] + 'T05:59:59Z';
+        d.setDate(d.getDate() - 2);
+        return (
+          d
+            .toISOString()
+            .replace(/\.\d{3}Z$/, 'Z')
+            .split('T')[0] + 'T00:00:00Z'
+        );
       })();
+      const publishedBefore = `${targetDate}T23:59:59Z`;
 
       const url =
         `https://www.googleapis.com/youtube/v3/search` +
@@ -38,18 +44,7 @@ export async function GET(request: Request) {
     };
 
     if (date) {
-      let item = await searchDate(date);
-
-      // Fallback: buscar el día anterior (a veces publican la noche antes)
-      if (!item) {
-        const prevDate = (() => {
-          const d = new Date(`${date}T00:00:00Z`);
-          d.setDate(d.getDate() - 1);
-          return d.toISOString().split('T')[0];
-        })();
-        if (!prevDate) return Response.json({ videoId: null });
-        item = await searchDate(prevDate);
-      }
+      const item = await searchDate(date);
 
       if (!item) return Response.json({ videoId: null });
 

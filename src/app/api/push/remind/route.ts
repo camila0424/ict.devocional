@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
   const payload = JSON.stringify({
     title: 'ICT Devocional 🙏',
     body: frase,
-    icon: '/icons/android-chrome-192x192.png',
+    icon: '/icons/icon-192.png',
   });
 
   const results = await Promise.allSettled(

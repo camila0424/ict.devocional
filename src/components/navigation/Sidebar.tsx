@@ -38,7 +38,7 @@ export function Sidebar({ userName, userInitial }: Props) {
           }}
         >
           <img
-            src="/icons/android-chrome-192x192.png"
+            src="/icons/icon-192.png"
             width={36}
             height={36}
             style={{ borderRadius: '50%' }}

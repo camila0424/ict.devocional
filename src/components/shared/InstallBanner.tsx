@@ -10,7 +10,7 @@ export function InstallBanner() {
   return (
     <div className="fixed top-0 right-0 left-0 z-50 flex items-center gap-3 bg-white px-4 py-2 shadow-md">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/icons/android-chrome-192x192.png" width={32} height={32} alt="ICT" />
+      <img src="/icons/icon-192.png" width={32} height={32} alt="ICT" />
       <div className="min-w-0 flex-1">
         <p className="text-sm leading-none font-bold text-gray-900">ICT Devocional</p>
         <p className="mt-0.5 truncate text-xs text-gray-400">ict-devocional.vercel.app</p>
