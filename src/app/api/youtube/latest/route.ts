@@ -47,6 +47,7 @@ export async function GET(request: Request) {
           d.setDate(d.getDate() - 1);
           return d.toISOString().split('T')[0];
         })();
+        if (!prevDate) return Response.json({ videoId: null });
         item = await searchDate(prevDate);
       }
 
