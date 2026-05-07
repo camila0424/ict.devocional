@@ -53,9 +53,12 @@ export function LevelTable() {
                   </td>
                   <td className="px-4 py-3 text-center">
                     {isCurrentLevel && (
-                      <span className="bg-primary inline-block rounded-full px-3 py-1 text-xs font-semibold text-white">
-                        Tú aquí
-                      </span>
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="bg-primary inline-block rounded-full px-3 py-1 text-xs font-semibold text-white">
+                          Tú aquí
+                        </span>
+                        <span className="text-muted text-xs">{totalDays} días completados</span>
+                      </div>
                     )}
                     {isPassed && !isCurrentLevel && <span className="inline-block text-lg">✓</span>}
                   </td>
