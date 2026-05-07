@@ -33,6 +33,7 @@ export async function GET(request: Request) {
       if (!match) return Response.json({ videoId: null });
 
       const [, , monthStr, dayStr] = match;
+      if (!monthStr || !dayStr) return Response.json({ videoId: null });
       const day = parseInt(dayStr, 10);
       const monthName = MONTHS_ES[parseInt(monthStr, 10) - 1];
 
