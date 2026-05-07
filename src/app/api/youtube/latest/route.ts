@@ -19,13 +19,19 @@ function isoDate(d: Date) {
   return d.toISOString().split('T')[0];
 }
 
-function titleMatchesDay(title: string, day: number, monthName: string): boolean {
+function titleMatchesDay(title: string, day: number): boolean {
   const t = title.toLowerCase();
-  const m = monthName.toLowerCase();
-  if (!t.includes(m)) return false;
-  const padded = String(day).padStart(2, '0');
-  // Accepts "07 mayo", "7 mayo", "7 de mayo", word-boundary match
-  return t.includes(padded) || new RegExp(`\\b${day}\\b`).test(t);
+  const dayPadded = String(day).padStart(2, '0'); // "07"
+  const dayPlain = String(day); // "7"
+
+  // Acepta "07 Mayo", "Jueves 07 Mayo", "7 Mayo", "7 de Mayo"
+  return (
+    t.includes(dayPadded) || // "07" dentro del título
+    t.includes(` ${dayPlain} `) || // " 7 " con espacios
+    t.includes(`| ${dayPlain} `) || // "| 7 " separador de título
+    t.includes(` ${dayPlain}|`) || // " 7|"
+    t.startsWith(`${dayPlain} `) // empieza con "7 "
+  );
 }
 
 export async function GET(request: Request) {
