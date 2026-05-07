@@ -1,13 +1,16 @@
 'use client';
 
 import { motion } from 'motion/react';
+import { useTotalDays } from '@/hooks/useTotalDays';
 import { LEVELS, getCurrentLevel } from '@/lib/levels';
 
-type Props = {
-  totalDays: number;
-};
+export function LevelTable() {
+  const { totalDays } = useTotalDays();
 
-export function LevelTable({ totalDays }: Props) {
+  if (totalDays === null) {
+    return <div className="border-border bg-surface h-64 animate-pulse rounded-2xl border" />;
+  }
+
   const currentLevel = getCurrentLevel(totalDays);
   const currentIndex = LEVELS.indexOf(currentLevel);
 
@@ -20,7 +23,7 @@ export function LevelTable({ totalDays }: Props) {
     >
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="border-border border-b bg-[var(--color-primary)]/5">
+          <thead className="border-border bg-primary/5 border-b">
             <tr>
               <th className="px-4 py-3 text-left font-semibold">Nivel</th>
               <th className="px-4 py-3 text-left font-semibold">Nombre</th>
@@ -40,8 +43,8 @@ export function LevelTable({ totalDays }: Props) {
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.26 + idx * 0.02 }}
                   className={`${
-                    isCurrentLevel ? 'bg-[var(--color-primary)]/5' : ''
-                  } transition-colors hover:bg-[var(--color-primary)]/3`}
+                    isCurrentLevel ? 'bg-primary/5' : ''
+                  } hover:bg-primary/3 transition-colors`}
                 >
                   <td className="px-4 py-3 text-xl">{level.emoji}</td>
                   <td className="px-4 py-3 font-medium">{level.name}</td>
@@ -50,7 +53,7 @@ export function LevelTable({ totalDays }: Props) {
                   </td>
                   <td className="px-4 py-3 text-center">
                     {isCurrentLevel && (
-                      <span className="inline-block rounded-full bg-[var(--color-primary)] px-3 py-1 text-xs font-semibold text-white">
+                      <span className="bg-primary inline-block rounded-full px-3 py-1 text-xs font-semibold text-white">
                         Tú aquí
                       </span>
                     )}

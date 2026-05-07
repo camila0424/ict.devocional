@@ -108,7 +108,7 @@ export default function ProgressPage() {
         />
       </motion.div>
 
-      <LevelTable totalDays={data.stats.totalCompleted} />
+      <LevelTable />
 
       <motion.div
         initial={{ opacity: 0, y: 8 }}

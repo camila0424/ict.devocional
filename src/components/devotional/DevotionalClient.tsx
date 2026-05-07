@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, BookOpen, X, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
@@ -197,6 +197,7 @@ export function DevotionalClient({ entry, initialResponse, initialStreak }: Prop
     entry.readings.map(() => alreadyCompleted),
   );
   const [videoWatched, setVideoWatched] = useState(alreadyCompleted);
+  const [videoAvailable, setVideoAvailable] = useState(true);
   const [celebrated, setCelebrated] = useState(alreadyCompleted);
   const [showCelebration, setShowCelebration] = useState(false);
   const [streak, setStreak] = useState(initialStreak);
@@ -204,9 +205,13 @@ export function DevotionalClient({ entry, initialResponse, initialStreak }: Prop
   const completingRef = useRef(alreadyCompleted);
   const sectionsRef = useRef<HTMLDivElement>(null);
 
-  const total = entry.readings.length + 1;
+  const handleVideoAvailability = useCallback((available: boolean) => {
+    setVideoAvailable(available);
+  }, []);
+
+  const total = entry.readings.length + (videoAvailable ? 1 : 0);
   const checkedReadings = readingChecks.filter(Boolean).length;
-  const progress = checkedReadings + (videoWatched ? 1 : 0);
+  const progress = checkedReadings + (videoAvailable && videoWatched ? 1 : 0);
 
   useEffect(() => {
     if (progress === total && !celebrated && !completingRef.current) {
@@ -221,6 +226,7 @@ export function DevotionalClient({ entry, initialResponse, initialStreak }: Prop
         .then((r) => r.json())
         .then((data) => {
           if (data.data?.streak) setStreak(data.data.streak);
+          window.dispatchEvent(new Event('devotional-completed'));
         })
         .catch(() => {});
     }
@@ -352,7 +358,12 @@ export function DevotionalClient({ entry, initialResponse, initialStreak }: Prop
         </div>
 
         {/* Video devocional */}
-        <YoutubePlayer watched={videoWatched} onWatched={() => setVideoWatched(true)} />
+        <YoutubePlayer
+          date={entry.date}
+          watched={videoWatched}
+          onWatched={() => setVideoWatched(true)}
+          onAvailabilityChange={handleVideoAvailability}
+        />
 
         {/* Banner completado */}
         {celebrated && (

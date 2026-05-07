@@ -13,31 +13,32 @@ type VideoData = {
 type State = { status: 'loading' } | { status: 'ready'; video: VideoData } | { status: 'empty' };
 
 type Props = {
+  date: string;
   watched: boolean;
   onWatched: () => void;
+  onAvailabilityChange: (available: boolean) => void;
 };
 
-export function YoutubePlayer({ watched, onWatched }: Props) {
+export function YoutubePlayer({ date, watched, onWatched, onAvailabilityChange }: Props) {
   const [state, setState] = useState<State>({ status: 'loading' });
 
   useEffect(() => {
-    fetch('/api/youtube/latest')
+    fetch(`/api/youtube/latest?date=${date}`)
       .then((r) => r.json())
       .then((data) => {
         if (data.videoId) {
           setState({ status: 'ready', video: data });
+          onAvailabilityChange(true);
         } else {
           setState({ status: 'empty' });
+          onAvailabilityChange(false);
         }
       })
-      .catch(() => setState({ status: 'empty' }));
-  }, []);
-
-  useEffect(() => {
-    if (state.status === 'empty' && !watched) {
-      onWatched();
-    }
-  }, [state.status, watched, onWatched]);
+      .catch(() => {
+        setState({ status: 'empty' });
+        onAvailabilityChange(false);
+      });
+  }, [date, onAvailabilityChange]);
 
   if (state.status === 'loading') {
     return (
@@ -49,7 +50,17 @@ export function YoutubePlayer({ watched, onWatched }: Props) {
     );
   }
 
-  if (state.status === 'empty') return null;
+  if (state.status === 'empty') {
+    return (
+      <div className="border-border bg-surface rounded-2xl border p-5 text-center">
+        <div className="mb-2 text-4xl">🙏</div>
+        <p className="text-sm font-semibold">El video de hoy aún no se ha publicado</p>
+        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+          Mientras tanto, medita en la Palabra de Dios y permite que Su voz hable a tu corazón.
+        </p>
+      </div>
+    );
+  }
 
   const { video } = state;
   return (

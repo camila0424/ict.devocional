@@ -15,7 +15,6 @@ type Props = {
   streak: { current: number; best: number };
   todayCompleted: boolean;
   completedDays: number[];
-  totalCompleted: number;
   missionText?: string | null;
 };
 
@@ -30,7 +29,6 @@ export function HomeClient({
   streak,
   todayCompleted,
   completedDays,
-  totalCompleted,
   missionText,
 }: Props) {
   const days = Array.from({ length: DAYS_IN_MAY }, (_, i) => i + 1);
@@ -76,7 +74,7 @@ export function HomeClient({
       </motion.div>
 
       {/* Nivel card */}
-      <LevelCard totalDays={totalCompleted} />
+      <LevelCard />
 
       {/* CTA devocional */}
       <motion.div

@@ -1,6 +1,7 @@
 'use client';
 
 import { motion } from 'motion/react';
+import { useTotalDays } from '@/hooks/useTotalDays';
 import {
   getCurrentLevel,
   getNextLevel,
@@ -8,11 +9,13 @@ import {
   getLevelProgress,
 } from '@/lib/levels';
 
-type Props = {
-  totalDays: number;
-};
+export function LevelCard() {
+  const { totalDays } = useTotalDays();
 
-export function LevelCard({ totalDays }: Props) {
+  if (totalDays === null) {
+    return <div className="border-border bg-surface h-34.5 animate-pulse rounded-2xl border" />;
+  }
+
   const currentLevel = getCurrentLevel(totalDays);
   const nextLevel = getNextLevel(totalDays);
   const daysUntilNext = getDaysUntilNextLevel(totalDays);
@@ -49,12 +52,12 @@ export function LevelCard({ totalDays }: Props) {
           {nextLevel && <span className="text-muted">Próximo: {nextLevel.name}</span>}
         </div>
 
-        <div className="h-2 overflow-hidden rounded-full bg-[var(--color-primary)]/10">
+        <div className="bg-primary/10 h-2 overflow-hidden rounded-full">
           <motion.div
             initial={{ width: 0 }}
             animate={{ width: `${progressPercent}%` }}
             transition={{ duration: 0.5 }}
-            className="h-full bg-[var(--color-primary)]"
+            className="bg-primary h-full"
           />
         </div>
 
