@@ -1,0 +1,16 @@
+{
+  "crons": [
+    {
+      "path": "/api/push/remind?turno=ma%C3%B1ana",
+      "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/push/remind?turno=tarde",
+      "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/push/remind?turno=noche",
+      "schedule": "0 17 * * *"
+    }
+  ]
+}
