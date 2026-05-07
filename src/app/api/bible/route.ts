@@ -76,6 +76,11 @@ const CODE_TO_JSON_KEY: Record<string, string> = {
   REV: 'apocalipsis',
 };
 
+// Case-insensitive lookup map built once from BOOK_MAP
+const BOOK_MAP_CI: Record<string, string> = Object.fromEntries(
+  Object.entries(BOOK_MAP).map(([k, v]) => [k.toLowerCase(), v]),
+);
+
 let bibleCache: BibleData | null = null;
 
 function getBibleData(): BibleData {
@@ -126,7 +131,8 @@ function parseRef(ref: string): {
   }
 
   const trimmedBook = bookRaw.trim();
-  const code = BOOK_MAP[trimmedBook] ?? trimmedBook.toUpperCase();
+  const code =
+    BOOK_MAP[trimmedBook] ?? BOOK_MAP_CI[trimmedBook.toLowerCase()] ?? trimmedBook.toUpperCase();
   const jsonKey = CODE_TO_JSON_KEY[code] ?? trimmedBook.toLowerCase();
 
   return { jsonKey, displayBook: trimmedBook, chapters, startVerse, endVerse };

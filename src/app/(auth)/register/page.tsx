@@ -83,7 +83,8 @@ export default function RegisterPage() {
           src="/icons/android-chrome-192x192.png"
           width={80}
           height={80}
-          className="mx-auto mb-4 rounded-2xl"
+          style={{ borderRadius: '20px' }}
+          alt="ICT"
         />
         <h1 className="text-2xl font-bold text-[var(--color-primary)]">
           {Strings.auth.registerTitle}

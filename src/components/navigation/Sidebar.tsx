@@ -19,7 +19,13 @@ export function Sidebar() {
   return (
     <aside className="border-border bg-background sticky top-0 hidden h-dvh w-56 shrink-0 flex-col border-r px-3 py-6 md:flex">
       <div className="mb-8 px-2">
-        <p className="text-muted text-[10px] font-semibold tracking-widest uppercase">ICT</p>
+        <img
+          src="/icons/android-chrome-192x192.png"
+          width={32}
+          height={32}
+          style={{ borderRadius: '8px' }}
+          alt="ICT"
+        />
         <h2 className="text-lg font-extrabold text-[var(--color-primary)]">Devocional</h2>
       </div>
 
