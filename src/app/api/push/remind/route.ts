@@ -3,13 +3,20 @@ import webpush from 'web-push';
 import { prisma } from '@/lib/prisma';
 import { getRecordatorio } from '@/constants/phrases';
 
-webpush.setVapidDetails(
-  process.env.VAPID_SUBJECT!,
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!,
-);
-
 export async function POST(req: NextRequest) {
+  const vapidSubject = process.env.VAPID_SUBJECT;
+  const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
+
+  if (!vapidSubject || !vapidPublicKey || !vapidPrivateKey) {
+    return NextResponse.json(
+      { error: 'VAPID environment variables are not configured' },
+      { status: 500 },
+    );
+  }
+
+  webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
+
   if (req.headers.get('X-Admin-Secret') !== process.env.ADMIN_SECRET) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
