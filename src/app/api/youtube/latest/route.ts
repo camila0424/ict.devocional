@@ -7,7 +7,8 @@ export async function GET(request: Request) {
 
   try {
     const { searchParams } = new URL(request.url);
-    const date = searchParams.get('date');
+    // Accept full ISO strings or YYYY-MM-DD; always work with just the date portion.
+    const date = searchParams.get('date')?.split('T')[0] ?? null;
 
     const searchDate = async (targetDate: string) => {
       // ICT publica la noche anterior al día que corresponde.
