@@ -83,7 +83,7 @@ export async function GET(request: Request) {
         snippet: { title: string; publishedAt: string; thumbnails?: { medium?: { url: string } } };
       }[] = data.items ?? [];
 
-      const item = items.find(({ snippet: { title } }) => titleMatchesDay(title, day, monthName));
+      const item = items.find(({ snippet: { title } }) => titleMatchesDay(title, day));
 
       if (!item) return Response.json({ videoId: null });
 
