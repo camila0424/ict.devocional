@@ -6,6 +6,11 @@ import { Home, BookOpen, BarChart3, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Strings } from '@/constants/strings';
 
+type Props = {
+  userName?: string;
+  userInitial?: string;
+};
+
 const tabs = [
   { href: '/', label: Strings.tabs.home, icon: Home },
   { href: '/plan', label: Strings.tabs.plan, icon: BookOpen },
@@ -13,20 +18,20 @@ const tabs = [
   { href: '/profile', label: Strings.tabs.profile, icon: User },
 ] as const;
 
-export function Sidebar() {
+export function Sidebar({ userName, userInitial }: Props) {
   const pathname = usePathname();
 
   return (
-    <aside className="border-border bg-background sticky top-0 hidden h-dvh w-56 shrink-0 flex-col border-r px-3 py-6 md:flex">
-      <div className="mb-8 px-2">
+    <aside className="sticky top-0 hidden h-dvh w-65 shrink-0 flex-col bg-[#1E3A8A] px-4 py-6 md:flex">
+      <div className="mb-8 flex items-center gap-3 px-2">
         <img
           src="/icons/android-chrome-192x192.png"
-          width={32}
-          height={32}
-          style={{ borderRadius: '8px' }}
+          width={40}
+          height={40}
+          style={{ borderRadius: '10px' }}
           alt="ICT"
         />
-        <h2 className="text-lg font-extrabold text-[var(--color-primary)]">Devocional</h2>
+        <h2 className="text-base font-extrabold text-white">ICT Devocional</h2>
       </div>
 
       <nav className="flex flex-col gap-1">
@@ -39,8 +44,8 @@ export function Sidebar() {
               className={cn(
                 'flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors',
                 active
-                  ? 'bg-[var(--color-primary-light)] text-[var(--color-primary)]'
-                  : 'text-muted hover:bg-[var(--color-primary-light)]/60 hover:text-[var(--color-primary)]',
+                  ? 'bg-white/20 text-white'
+                  : 'text-blue-200 hover:bg-white/10 hover:text-white',
               )}
             >
               <Icon size={20} />
@@ -49,6 +54,15 @@ export function Sidebar() {
           );
         })}
       </nav>
+
+      {userName && (
+        <div className="mt-auto flex items-center gap-3 px-2 pt-6">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/20 text-sm font-bold text-white">
+            {userInitial}
+          </div>
+          <span className="truncate text-sm font-medium text-blue-100">{userName}</span>
+        </div>
+      )}
     </aside>
   );
 }
