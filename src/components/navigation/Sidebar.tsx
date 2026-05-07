@@ -24,13 +24,27 @@ export function Sidebar({ userName, userInitial }: Props) {
   return (
     <aside className="sticky top-0 hidden h-dvh w-65 shrink-0 flex-col bg-[#1E3A8A] px-4 py-6 md:flex">
       <div className="mb-8 flex items-center gap-3 px-2">
-        <img
-          src="/icons/android-chrome-192x192.png"
-          width={40}
-          height={40}
-          style={{ borderRadius: '10px' }}
-          alt="ICT"
-        />
+        <div
+          style={{
+            background: 'white',
+            borderRadius: '50%',
+            padding: '4px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '44px',
+            height: '44px',
+            flexShrink: 0,
+          }}
+        >
+          <img
+            src="/icons/android-chrome-192x192.png"
+            width={36}
+            height={36}
+            style={{ borderRadius: '50%' }}
+            alt="ICT"
+          />
+        </div>
         <h2 className="text-base font-extrabold text-white">ICT Devocional</h2>
       </div>
 

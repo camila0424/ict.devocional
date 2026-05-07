@@ -54,13 +54,27 @@ export default function LoginPage() {
       className="w-full"
     >
       <div className="mb-8 flex flex-col items-center gap-2">
-        <img
-          src="/icons/android-chrome-192x192.png"
-          width={80}
-          height={80}
-          style={{ borderRadius: '20px' }}
-          alt="ICT"
-        />
+        <div
+          style={{
+            background: 'white',
+            borderRadius: '50%',
+            padding: '4px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '44px',
+            height: '44px',
+            flexShrink: 0,
+          }}
+        >
+          <img
+            src="/icons/android-chrome-192x192.png"
+            width={36}
+            height={36}
+            style={{ borderRadius: '50%' }}
+            alt="ICT"
+          />
+        </div>
         <h1 className="text-2xl font-bold text-[var(--color-primary)]">
           {Strings.auth.loginTitle}
         </h1>
