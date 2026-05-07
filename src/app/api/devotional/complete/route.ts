@@ -19,7 +19,7 @@ const completeSchema = z.object({
 
 export async function POST(
   request: Request,
-): Promise<NextResponse<ApiResponse<{ streakCurrent: number }>>> {
+): Promise<NextResponse<ApiResponse<{ streak: number }>>> {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json(
@@ -92,5 +92,5 @@ export async function POST(
     },
   });
 
-  return NextResponse.json({ success: true, data: { streakCurrent: newStreak.current } });
+  return NextResponse.json({ success: true, data: { streak: newStreak.current } });
 }

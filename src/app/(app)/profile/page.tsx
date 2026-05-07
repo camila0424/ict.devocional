@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { LogOut, User } from 'lucide-react';
 import { auth, signOut } from '@/lib/auth';
 import { ReminderPicker } from '@/components/profile/ReminderPicker';
+import { PushSubscribeButton } from '@/components/profile/PushSubscribeButton';
 
 export default async function ProfilePage() {
   const session = await auth();
@@ -22,7 +23,7 @@ export default async function ProfilePage() {
 
       {/* Card usuario */}
       <div className="border-border bg-surface flex items-center gap-4 rounded-2xl border p-5">
-        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[var(--color-primary-light)] text-lg font-black text-[var(--color-primary)]">
+        <div className="bg-primary-light text-primary flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-lg font-black">
           {initials || <User size={24} />}
         </div>
         <div className="min-w-0">
@@ -33,6 +34,9 @@ export default async function ProfilePage() {
 
       {/* Recordatorio */}
       <ReminderPicker />
+
+      {/* Notificaciones push */}
+      <PushSubscribeButton />
 
       {/* Cerrar sesión */}
       <form

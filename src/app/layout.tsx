@@ -18,6 +18,10 @@ export const metadata: Metadata = {
     title: 'ICT',
   },
   formatDetection: { telephone: false },
+  icons: {
+    icon: '/icons/android-chrome-192x192.png',
+    apple: '/icons/apple-touch-icon.png',
+  },
 };
 
 export const viewport: Viewport = {

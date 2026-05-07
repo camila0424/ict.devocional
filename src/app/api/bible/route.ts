@@ -86,32 +86,50 @@ function getBibleData(): BibleData {
   return bibleCache;
 }
 
-function parseRef(
-  ref: string,
-): {
+function parseRef(ref: string): {
   jsonKey: string;
   displayBook: string;
-  chapter: number;
+  chapters: number[];
   startVerse: number;
-  endVerse: number;
+  endVerse: number | null;
 } | null {
   const decoded = decodeURIComponent(ref).replace(/\+/g, ' ');
-  const match = decoded.match(/^(.*?)\s+(\d+):(\d+)(?:-(\d+))?$/);
-  if (!match) return null;
-  const [, bookRaw, chapterStr, startStr, endStr] = match;
-  if (!bookRaw || !chapterStr || !startStr) return null;
+
+  const matchVerse = decoded.match(/^(.*?)\s+(\d+):(\d+)(?:-(\d+))?$/);
+  const matchChapterRange = decoded.match(/^(.*?)\s+(\d+)-(\d+)$/);
+  const matchChapter = decoded.match(/^(.*?)\s+(\d+)$/);
+
+  let bookRaw: string;
+  let chapters: number[];
+  let startVerse: number;
+  let endVerse: number | null;
+
+  if (matchVerse) {
+    bookRaw = matchVerse[1]!;
+    chapters = [parseInt(matchVerse[2]!, 10)];
+    startVerse = parseInt(matchVerse[3]!, 10);
+    endVerse = matchVerse[4] ? parseInt(matchVerse[4], 10) : startVerse;
+  } else if (matchChapterRange) {
+    bookRaw = matchChapterRange[1]!;
+    const ch1 = parseInt(matchChapterRange[2]!, 10);
+    const ch2 = parseInt(matchChapterRange[3]!, 10);
+    chapters = Array.from({ length: ch2 - ch1 + 1 }, (_, i) => ch1 + i);
+    startVerse = 1;
+    endVerse = null;
+  } else if (matchChapter) {
+    bookRaw = matchChapter[1]!;
+    chapters = [parseInt(matchChapter[2]!, 10)];
+    startVerse = 1;
+    endVerse = null;
+  } else {
+    return null;
+  }
 
   const trimmedBook = bookRaw.trim();
   const code = BOOK_MAP[trimmedBook] ?? trimmedBook.toUpperCase();
   const jsonKey = CODE_TO_JSON_KEY[code] ?? trimmedBook.toLowerCase();
 
-  return {
-    jsonKey,
-    displayBook: trimmedBook,
-    chapter: parseInt(chapterStr, 10),
-    startVerse: parseInt(startStr, 10),
-    endVerse: endStr ? parseInt(endStr, 10) : parseInt(startStr, 10),
-  };
+  return { jsonKey, displayBook: trimmedBook, chapters, startVerse, endVerse };
 }
 
 export async function GET(req: NextRequest) {
@@ -125,7 +143,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Referencia bíblica inválida' }, { status: 400 });
   }
 
-  const { jsonKey, displayBook, chapter, startVerse, endVerse } = parsed;
+  const { jsonKey, displayBook, chapters, startVerse, endVerse } = parsed;
 
   try {
     const data = getBibleData();
@@ -134,15 +152,19 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Libro no encontrado' }, { status: 404 });
     }
 
-    const chapterData = bookData[String(chapter)];
-    if (!chapterData) {
-      return NextResponse.json({ error: 'Capítulo no encontrado' }, { status: 404 });
-    }
-
     const parts: string[] = [];
-    for (let v = startVerse; v <= endVerse; v++) {
-      const text = chapterData[String(v)];
-      if (text) parts.push(`${v} ${text.trim()}`);
+    for (const ch of chapters) {
+      const chapterData = bookData[String(ch)];
+      if (!chapterData) continue;
+      const verseNums = Object.keys(chapterData)
+        .map(Number)
+        .sort((a, b) => a - b);
+      for (const v of verseNums) {
+        if (v < startVerse) continue;
+        if (endVerse !== null && v > endVerse) break;
+        const text = chapterData[String(v)];
+        if (text) parts.push(`${v} ${text.trim()}`);
+      }
     }
 
     if (parts.length === 0) {
@@ -152,7 +174,15 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const reference = `${displayBook} ${chapter}:${startVerse}${endVerse !== startVerse ? `-${endVerse}` : ''}`;
+    let reference: string;
+    if (chapters.length > 1) {
+      reference = `${displayBook} ${chapters[0]}-${chapters[chapters.length - 1]}`;
+    } else if (endVerse === null) {
+      reference = `${displayBook} ${chapters[0]}`;
+    } else {
+      reference = `${displayBook} ${chapters[0]}:${startVerse}${endVerse !== startVerse ? `-${endVerse}` : ''}`;
+    }
+
     return NextResponse.json({ text: parts.join(' '), reference });
   } catch {
     return NextResponse.json({ error: 'Error al leer la Biblia' }, { status: 500 });

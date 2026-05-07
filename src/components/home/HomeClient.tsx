@@ -5,6 +5,7 @@ import { motion } from 'motion/react';
 import { ChevronRight, Trophy } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LevelCard } from '@/components/ui/LevelCard';
+import { getFraseDelDia } from '@/constants/phrases';
 
 type Props = {
   userName: string;
@@ -104,11 +105,26 @@ export function HomeClient({
         </Link>
       </motion.div>
 
+      {/* Frase del día */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        className="rounded-2xl p-4"
+        style={{ background: 'linear-gradient(135deg, #dbeafe, #eff6ff)' }}
+      >
+        <div className="mb-2 flex items-center gap-2">
+          <span className="text-lg">💬</span>
+          <h2 className="font-bold text-blue-900">Frase del día</h2>
+        </div>
+        <p className="text-sm leading-relaxed text-blue-800 italic">{getFraseDelDia()}</p>
+      </motion.div>
+
       {/* Misión de Mayo */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.25, duration: 0.3 }}
+        transition={{ delay: 0.35, duration: 0.3 }}
         className="rounded-2xl border border-blue-200 bg-blue-50 p-4"
       >
         <h2 className="mb-2 font-bold text-blue-900">🎯 Misión de Mayo</h2>
@@ -121,7 +137,7 @@ export function HomeClient({
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3, duration: 0.3 }}
+        transition={{ delay: 0.4, duration: 0.3 }}
         className="border-border bg-surface rounded-2xl border p-4"
       >
         <div className="mb-3 flex items-center justify-between">

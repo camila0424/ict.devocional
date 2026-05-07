@@ -44,12 +44,13 @@ model DevotionalPlan {
 
 // ── Día del plan (3 lecturas + estructura para 8 secciones)
 model DailyEntry {
-  id          String   @id @default(cuid())
-  planId      String   @map("plan_id")
-  dayNumber   Int      @map("day_number")
-  date        DateTime @db.Date
-  rawReadings String   @map("raw_readings")
-  createdAt   DateTime @default(now()) @map("created_at")
+  id             String   @id @default(cuid())
+  planId         String   @map("plan_id")
+  dayNumber      Int      @map("day_number")
+  date           DateTime @db.Date
+  rawReadings    String   @map("raw_readings")
+  youtubeVideoId String?  @map("youtube_video_id")
+  createdAt      DateTime @default(now()) @map("created_at")
 
   plan      DevotionalPlan     @relation(fields: [planId], references: [id], onDelete: Cascade)
   readings  Reading[]
