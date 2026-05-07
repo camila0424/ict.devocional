@@ -162,7 +162,15 @@ function ReadingItem({
             className="overflow-hidden"
           >
             <p className="text-foreground px-4 pt-3 pb-2 text-sm leading-relaxed whitespace-pre-wrap">
-              {text}
+              {text.split(/(\d+\s)/).map((part, i) =>
+                /^\d+\s$/.test(part) ? (
+                  <span key={i} className="text-foreground/80 font-bold dark:text-white">
+                    {part}
+                  </span>
+                ) : (
+                  part
+                ),
+              )}
             </p>
           </motion.div>
         )}
