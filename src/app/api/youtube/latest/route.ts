@@ -15,76 +15,64 @@ const MONTHS_ES = [
   'Diciembre',
 ];
 
-function isoDate(d: Date) {
-  return d.toISOString().split('T')[0];
-}
-
 function titleMatchesDay(title: string, day: number): boolean {
   const t = title.toLowerCase();
-  const dayPadded = String(day).padStart(2, '0'); // "07"
-  const dayPlain = String(day); // "7"
-
-  // Acepta "07 Mayo", "Jueves 07 Mayo", "7 Mayo", "7 de Mayo"
+  const dayPadded = String(day).padStart(2, '0');
+  const dayPlain = String(day);
   return (
-    t.includes(dayPadded) || // "07" dentro del título
-    t.includes(` ${dayPlain} `) || // " 7 " con espacios
-    t.includes(`| ${dayPlain} `) || // "| 7 " separador de título
-    t.includes(` ${dayPlain}|`) || // " 7|"
-    t.startsWith(`${dayPlain} `) // empieza con "7 "
+    t.includes(dayPadded) ||
+    t.includes(` ${dayPlain} `) ||
+    t.includes(`| ${dayPlain} `) ||
+    t.includes(` ${dayPlain}|`) ||
+    t.startsWith(`${dayPlain} `)
   );
 }
 
 export async function GET(request: Request) {
-  if (!process.env.YOUTUBE_API_KEY) {
+  if (!process.env.YOUTUBE_API_KEY)
     return Response.json({ success: false, error: 'Missing YOUTUBE_API_KEY' });
-  }
 
   try {
     const { searchParams } = new URL(request.url);
-    const date = searchParams.get('date')?.split('T')[0] ?? null;
+    const dayParam = searchParams.get('day');
+    const monthParam = searchParams.get('month');
 
-    if (date) {
-      const match = date.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-      if (!match) return Response.json({ videoId: null });
+    if (dayParam && monthParam) {
+      const day = parseInt(dayParam, 10);
+      const month = parseInt(monthParam, 10);
+      const monthName = MONTHS_ES[month - 1];
+      if (!monthName || isNaN(day)) return Response.json({ videoId: null });
 
-      const [, , monthStr, dayStr] = match;
-      if (!monthStr || !dayStr) return Response.json({ videoId: null });
-      const day = parseInt(dayStr, 10);
-      const monthName = MONTHS_ES[parseInt(monthStr, 10) - 1];
-      if (!monthName) return Response.json({ videoId: null });
-
-      // ICT publishes "N Mayo" the night before day N.
-      // Use UTC methods to avoid server-timezone bugs.
-      const baseMs = new Date(`${date}T00:00:00Z`).getTime();
-      const after = isoDate(new Date(baseMs - 7 * 86400_000)) + 'T00:00:00Z';
-      const before = isoDate(new Date(baseMs + 1 * 86400_000)) + 'T23:59:59Z';
-
-      const q = encodeURIComponent(`${dayStr} ${monthName}`);
+      const dayPadded = String(day).padStart(2, '0');
+      const q = encodeURIComponent(`${dayPadded} ${monthName}`);
       const url =
         `https://www.googleapis.com/youtube/v3/search` +
-        `?part=snippet` +
-        `&channelId=UC023hX0ppaxW8GflnfvNcTg` +
-        `&maxResults=10` +
-        `&order=date` +
-        `&type=video` +
-        `&q=${q}` +
-        `&publishedAfter=${after}` +
-        `&publishedBefore=${before}` +
+        `?part=snippet&channelId=UC023hX0ppaxW8GflnfvNcTg` +
+        `&maxResults=10&order=date&type=video&q=${q}` +
         `&key=${process.env.YOUTUBE_API_KEY}`;
 
       const res = await fetch(url);
       if (!res.ok) return Response.json({ videoId: null });
 
-      const data = await res.json();
-      console.log('YouTube search result:', JSON.stringify(data));
+      const data = (await res.json()) as {
+        items?: {
+          id: { videoId: string };
+          snippet: {
+            title: string;
+            publishedAt: string;
+            thumbnails?: { medium?: { url: string } };
+          };
+        }[];
+      };
+      console.log(
+        'YouTube day',
+        day,
+        monthName,
+        '→',
+        data.items?.map((i) => i.snippet.title),
+      );
 
-      const items: {
-        id: { videoId: string };
-        snippet: { title: string; publishedAt: string; thumbnails?: { medium?: { url: string } } };
-      }[] = data.items ?? [];
-
-      const item = items.find(({ snippet: { title } }) => titleMatchesDay(title, day));
-
+      const item = (data.items ?? []).find(({ snippet: { title } }) => titleMatchesDay(title, day));
       if (!item) return Response.json({ videoId: null });
 
       return Response.json({
@@ -95,24 +83,22 @@ export async function GET(request: Request) {
       });
     }
 
-    // Sin fecha: trae el más reciente
+    // Sin parámetros: último video
     const url =
       `https://www.googleapis.com/youtube/v3/search` +
-      `?part=snippet` +
-      `&channelId=UC023hX0ppaxW8GflnfvNcTg` +
-      `&maxResults=1` +
-      `&order=date` +
-      `&type=video` +
+      `?part=snippet&channelId=UC023hX0ppaxW8GflnfvNcTg` +
+      `&maxResults=1&order=date&type=video` +
       `&key=${process.env.YOUTUBE_API_KEY}`;
-
     const res = await fetch(url);
     if (!res.ok) return Response.json({ videoId: null });
-
-    const data = await res.json();
-    console.log('YouTube search result (no date):', JSON.stringify(data));
+    const data = (await res.json()) as {
+      items?: {
+        id: { videoId: string };
+        snippet: { title: string; publishedAt: string; thumbnails?: { medium?: { url: string } } };
+      }[];
+    };
     const item = data.items?.[0];
     if (!item) return Response.json({ videoId: null });
-
     return Response.json({
       videoId: item.id.videoId,
       title: item.snippet.title,

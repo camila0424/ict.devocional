@@ -367,7 +367,8 @@ export function DevotionalClient({ entry, initialResponse, initialStreak }: Prop
 
         {/* Video devocional */}
         <YoutubePlayer
-          date={entry.date}
+          dayNumber={entry.dayNumber}
+          month={parseInt(entry.date.split('-')[1]!, 10)}
           watched={videoWatched}
           onWatched={() => setVideoWatched(true)}
           onAvailabilityChange={handleVideoAvailability}

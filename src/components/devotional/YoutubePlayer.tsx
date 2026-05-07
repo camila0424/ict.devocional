@@ -26,13 +26,20 @@ type VideoData = { videoId: string; title: string; publishedAt: string; thumbnai
 type State = { status: 'loading' } | { status: 'ready'; video: VideoData } | { status: 'empty' };
 
 type Props = {
-  date: string;
+  dayNumber: number;
+  month: number;
   watched: boolean;
   onWatched: () => void;
   onAvailabilityChange: (available: boolean) => void;
 };
 
-export function YoutubePlayer({ date, watched, onWatched, onAvailabilityChange }: Props) {
+export function YoutubePlayer({
+  dayNumber,
+  month,
+  watched,
+  onWatched,
+  onAvailabilityChange,
+}: Props) {
   const [state, setState] = useState<State>({ status: 'loading' });
   const [completed, setCompleted] = useState(watched);
   const playerContainerRef = useRef<HTMLDivElement>(null);
@@ -42,7 +49,7 @@ export function YoutubePlayer({ date, watched, onWatched, onAvailabilityChange }
   }, [onWatched]);
 
   useEffect(() => {
-    fetch(`/api/youtube/latest?date=${date}`)
+    fetch(`/api/youtube/latest?day=${dayNumber}&month=${month}`)
       .then((r) => r.json())
       .then((data) => {
         if (data.videoId) {
@@ -57,7 +64,7 @@ export function YoutubePlayer({ date, watched, onWatched, onAvailabilityChange }
         setState({ status: 'empty' });
         onAvailabilityChange(false);
       });
-  }, [date, onAvailabilityChange]);
+  }, [dayNumber, month, onAvailabilityChange]);
 
   useEffect(() => {
     if (state.status !== 'ready') return;
