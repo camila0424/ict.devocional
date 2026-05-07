@@ -49,7 +49,7 @@ export async function GET(request: Request) {
         return isoDate(d) + 'T23:59:59Z';
       })();
 
-      const q = encodeURIComponent(`${day} ${monthName}`);
+      const q = encodeURIComponent(`${dayStr} ${monthName}`);
       const url =
         `https://www.googleapis.com/youtube/v3/search` +
         `?part=snippet` +
@@ -73,11 +73,10 @@ export async function GET(request: Request) {
         snippet: { title: string; publishedAt: string; thumbnails?: { medium?: { url: string } } };
       }[] = data.items ?? [];
 
-      // Find the video whose title contains the exact day number + month name.
-      const item = items.find(
-        ({ snippet: { title } }) =>
-          title.includes(`${dayStr} ${monthName}`) || title.includes(`${day} ${monthName}`),
-      );
+      const item = items.find(({ snippet: { title } }) => {
+        if (day < 10) return title.includes(`0${day}`);
+        return title.includes(` ${day} `) || title.startsWith(`${day} `);
+      });
 
       if (!item) return Response.json({ videoId: null });
 
