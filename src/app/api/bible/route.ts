@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { BOOK_MAP } from '@/lib/bible-api';
 
-// YouVersion bible IDs — sourced from bible.com/versions/<id>
 const VERSION_IDS: Record<string, number> = {
   rvr1960: 149,
   ntv: 127,
@@ -13,76 +12,40 @@ const BOOK_MAP_CI: Record<string, string> = Object.fromEntries(
   Object.entries(BOOK_MAP).map(([k, v]) => [k.toLowerCase(), v]),
 );
 
-function parseRef(ref: string): {
-  bookCode: string;
-  displayBook: string;
-  chapter: number;
-  startVerse: number;
-  endVerse: number | null;
-} | null {
-  const decoded = decodeURIComponent(ref).replace(/\+/g, ' ');
+function parseRef(ref: string): { bookCode: string; usfm: string } | null {
+  const decoded = decodeURIComponent(ref).replace(/\+/g, ' ').trim();
 
-  // "Book N:S-E" → single chapter, verse range
   const matchVerse = decoded.match(/^(.*?)\s+(\d+):(\d+)(?:-(\d+))?$/);
-  // "Book N-M" → multi-chapter whole
-  const matchChapterRange = decoded.match(/^(.*?)\s+(\d+)-(\d+)$/);
-  // "Book N" → whole chapter
+  const matchChRange = decoded.match(/^(.*?)\s+(\d+)-(\d+)$/);
   const matchChapter = decoded.match(/^(.*?)\s+(\d+)$/);
 
-  let bookRaw: string;
-  let chapter: number;
-  let startVerse: number;
-  let endVerse: number | null;
+  let bookRaw: string, usfm: string;
 
   if (matchVerse) {
-    bookRaw = matchVerse[1]!;
-    chapter = parseInt(matchVerse[2]!, 10);
-    startVerse = parseInt(matchVerse[3]!, 10);
-    endVerse = matchVerse[4] ? parseInt(matchVerse[4], 10) : startVerse;
-  } else if (matchChapterRange) {
-    // Multi-chapter: treat as chapter=first, full range
-    bookRaw = matchChapterRange[1]!;
-    chapter = parseInt(matchChapterRange[2]!, 10);
-    startVerse = 1;
-    endVerse = null;
+    bookRaw = matchVerse[1]!.trim();
+    const ch = matchVerse[2];
+    const vs = matchVerse[3];
+    const ve = matchVerse[4];
+    const book = BOOK_MAP[bookRaw] ?? BOOK_MAP_CI[bookRaw.toLowerCase()] ?? bookRaw.toUpperCase();
+    usfm = ve ? `${book}.${ch}.${vs}-${book}.${ch}.${ve}` : `${book}.${ch}.${vs}`;
+  } else if (matchChRange) {
+    bookRaw = matchChRange[1]!.trim();
+    const ch1 = matchChRange[2];
+    const ch2 = matchChRange[3];
+    const book = BOOK_MAP[bookRaw] ?? BOOK_MAP_CI[bookRaw.toLowerCase()] ?? bookRaw.toUpperCase();
+    usfm = `${book}.${ch1}-${book}.${ch2}`;
   } else if (matchChapter) {
-    bookRaw = matchChapter[1]!;
-    chapter = parseInt(matchChapter[2]!, 10);
-    startVerse = 1;
-    endVerse = null;
+    bookRaw = matchChapter[1]!.trim();
+    const ch = matchChapter[2];
+    const book = BOOK_MAP[bookRaw] ?? BOOK_MAP_CI[bookRaw.toLowerCase()] ?? bookRaw.toUpperCase();
+    usfm = `${book}.${ch}`;
   } else {
     return null;
   }
 
-  const trimmedBook = bookRaw.trim();
-  const bookCode =
-    BOOK_MAP[trimmedBook] ?? BOOK_MAP_CI[trimmedBook.toLowerCase()] ?? trimmedBook.toUpperCase();
-
-  return { bookCode, displayBook: trimmedBook, chapter, startVerse, endVerse };
+  const bookCode = BOOK_MAP[bookRaw] ?? BOOK_MAP_CI[bookRaw.toLowerCase()] ?? bookRaw.toUpperCase();
+  return { bookCode, usfm };
 }
-
-function toUsfm(
-  bookCode: string,
-  chapter: number,
-  startVerse: number,
-  endVerse: number | null,
-): string {
-  const base = `${bookCode}.${chapter}`;
-  if (endVerse === null) return base;
-  if (endVerse === startVerse) return `${base}.${startVerse}`;
-  return `${base}.${startVerse}-${bookCode}.${chapter}.${endVerse}`;
-}
-
-type YouVersionVerse = {
-  usfm: string;
-  text: string;
-};
-
-type YouVersionPassageResponse = {
-  verses?: YouVersionVerse[];
-  passage?: string;
-  canonical?: string;
-};
 
 export async function GET(req: NextRequest) {
   if (!process.env.YOUVERSION_API_KEY) {
@@ -95,17 +58,15 @@ export async function GET(req: NextRequest) {
   }
 
   const versionParam = (req.nextUrl.searchParams.get('version') ?? 'rvr1960').toLowerCase();
-  const bibleId = VERSION_IDS[versionParam] ?? VERSION_IDS.rvr1960!;
+  const bibleId = VERSION_IDS[versionParam] ?? VERSION_IDS['rvr1960']!;
 
   const parsed = parseRef(refParam);
   if (!parsed) {
     return NextResponse.json({ error: 'Referencia bíblica inválida' }, { status: 400 });
   }
 
-  const { bookCode, displayBook, chapter, startVerse, endVerse } = parsed;
-  const usfm = toUsfm(bookCode, chapter, startVerse, endVerse);
-
-  const apiUrl = `https://api.youversion.com/v1/bibles/${bibleId}/passages/${encodeURIComponent(usfm)}`;
+  // Endpoint correcto según documentación oficial YouVersion
+  const apiUrl = `https://api.youversion.com/v1/bibles/${bibleId}/passages/${encodeURIComponent(parsed.usfm)}?format=text&include_headings=false&include_notes=false`;
 
   const res = await fetch(apiUrl, {
     headers: { 'X-YVP-App-Key': process.env.YOUVERSION_API_KEY },
@@ -114,36 +75,19 @@ export async function GET(req: NextRequest) {
 
   if (!res.ok) {
     const errBody = await res.text().catch(() => '(no body)');
-    console.error('[bible] YouVersion error', res.status, usfm, errBody);
+    console.error('[bible] YouVersion error', res.status, parsed.usfm, errBody);
     return NextResponse.json(
-      { error: `YouVersion API error ${res.status}`, detail: errBody },
+      { error: `YouVersion ${res.status}`, detail: errBody },
       { status: 502 },
     );
   }
 
-  const data = (await res.json()) as YouVersionPassageResponse;
+  // La API devuelve { id, content, reference }
+  const data = (await res.json()) as { id: string; content: string; reference: string };
 
-  let text: string;
-
-  if (data.verses && data.verses.length > 0) {
-    text = data.verses
-      .map((v) => {
-        const verseNum = v.usfm.split('.')[2] ?? '';
-        return verseNum ? `${verseNum} ${v.text.trim()}` : v.text.trim();
-      })
-      .join(' ');
-  } else if (data.passage) {
-    text = data.passage.trim();
-  } else {
-    return NextResponse.json({ error: 'Versos no encontrados' }, { status: 404 });
+  if (!data.content) {
+    return NextResponse.json({ error: 'Sin contenido' }, { status: 404 });
   }
 
-  const reference =
-    endVerse === null
-      ? `${displayBook} ${chapter}`
-      : endVerse === startVerse
-        ? `${displayBook} ${chapter}:${startVerse}`
-        : `${displayBook} ${chapter}:${startVerse}-${endVerse}`;
-
-  return NextResponse.json({ text, reference });
+  return NextResponse.json({ text: data.content, reference: data.reference });
 }
