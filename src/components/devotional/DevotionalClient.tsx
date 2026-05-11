@@ -58,7 +58,15 @@ const EMPTY_RESPONSE: ResponseState = {
   completedAt: null,
 };
 
+type BibleVersion = 'rvr1960' | 'ntv' | 'tla' | 'blp';
 type ReadingItemUIState = 'idle' | 'loading' | 'open' | 'error';
+
+const BIBLE_VERSIONS: { id: BibleVersion; label: string }[] = [
+  { id: 'rvr1960', label: 'RVR1960' },
+  { id: 'ntv', label: 'NTV' },
+  { id: 'tla', label: 'TLA' },
+  { id: 'blp', label: 'BLP' },
+];
 
 function ReadingItem({
   reading,
@@ -70,7 +78,26 @@ function ReadingItem({
   onCheck: () => void;
 }) {
   const [status, setStatus] = useState<ReadingItemUIState>('idle');
-  const [text, setText] = useState<string | null>(null);
+  const [versionTexts, setVersionTexts] = useState<Partial<Record<BibleVersion, string>>>({});
+  const [activeVersion, setActiveVersion] = useState<BibleVersion>('rvr1960');
+
+  const displayText = versionTexts[activeVersion] ?? null;
+
+  async function loadVersion(version: BibleVersion) {
+    if (versionTexts[version]) {
+      setActiveVersion(version);
+      return;
+    }
+    setStatus('loading');
+    setActiveVersion(version);
+    try {
+      const result = await fetchBibleText(`${reading.bookFull} ${reading.reference}`, version);
+      setVersionTexts((prev) => ({ ...prev, [version]: result.text }));
+      setStatus('open');
+    } catch {
+      setStatus('error');
+    }
+  }
 
   async function toggle() {
     if (status === 'loading') return;
@@ -78,18 +105,7 @@ function ReadingItem({
       setStatus('idle');
       return;
     }
-    if (text !== null) {
-      setStatus('open');
-      return;
-    }
-    setStatus('loading');
-    try {
-      const result = await fetchBibleText(`${reading.bookFull} ${reading.reference}`);
-      setText(result.text);
-      setStatus('open');
-    } catch {
-      setStatus('error');
-    }
+    await loadVersion(activeVersion);
   }
 
   return (
@@ -152,7 +168,7 @@ function ReadingItem({
       </div>
 
       <AnimatePresence initial={false}>
-        {status === 'open' && text && (
+        {status === 'open' && displayText && (
           <motion.div
             key="text"
             initial={{ height: 0, opacity: 0 }}
@@ -161,8 +177,26 @@ function ReadingItem({
             transition={{ duration: 0.22 }}
             className="overflow-hidden"
           >
-            <p className="text-foreground px-4 pt-3 pb-2 text-sm leading-relaxed whitespace-pre-wrap">
-              {text.split(/(\d+\s)/).map((part, i) =>
+            {/* Version selector */}
+            <div className="flex gap-1.5 px-4 pt-3">
+              {BIBLE_VERSIONS.map(({ id, label }) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => loadVersion(id)}
+                  className={cn(
+                    'rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors',
+                    activeVersion === id
+                      ? 'bg-primary text-white'
+                      : 'bg-primary-light text-primary-dark hover:bg-primary/20',
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <p className="text-foreground px-4 pt-2 pb-2 text-sm leading-relaxed whitespace-pre-wrap">
+              {displayText.split(/(\d+\s)/).map((part, i) =>
                 /^\d+\s$/.test(part) ? (
                   <span key={i} className="text-foreground/80 font-bold dark:text-white">
                     {part}
@@ -275,7 +309,7 @@ export function DevotionalClient({ entry, initialResponse, initialStreak }: Prop
             >
               <div className="mb-4 text-6xl">🎉</div>
               <h2 className="mb-2 text-xl font-bold">¡Completaste tu devocional de hoy!</h2>
-              <p className="mb-6 text-sm leading-relaxed text-gray-500 dark:text-gray-400">
+              <p className="text-muted mb-6 text-sm leading-relaxed">
                 Tu racha sigue creciendo 🔥 Ahora te invitamos a llenar tu Orden del Día para
                 profundizar más.
               </p>
@@ -292,7 +326,7 @@ export function DevotionalClient({ entry, initialResponse, initialStreak }: Prop
               </button>
               <button
                 onClick={() => router.push('/')}
-                className="w-full rounded-2xl border border-gray-200 py-3.5 text-sm font-semibold text-gray-600 dark:border-gray-700 dark:text-gray-300"
+                className="border-border text-muted w-full rounded-2xl border py-3.5 text-sm font-semibold"
               >
                 Listo, gracias
               </button>
@@ -349,7 +383,7 @@ export function DevotionalClient({ entry, initialResponse, initialStreak }: Prop
           <div className="mb-3 flex items-center gap-2">
             <BookOpen size={16} className="text-primary" />
             <h2 className="font-bold">Lecturas de hoy</h2>
-            <span className="ml-auto text-xs text-gray-400">
+            <span className="text-muted ml-auto text-xs">
               {checkedReadings}/{entry.readings.length} leídas
             </span>
           </div>

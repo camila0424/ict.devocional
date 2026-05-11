@@ -52,7 +52,8 @@ export async function GET(
       date: entry.date,
       rawReadings: entry.rawReadings,
       readings: entry.readings,
-      missionText: entry.plan.missionText ?? null,
+      visionText: entry.plan.visionText ?? null,
+      strategyText: entry.plan.strategyText ?? null,
       response: response
         ? {
             message: response.message,

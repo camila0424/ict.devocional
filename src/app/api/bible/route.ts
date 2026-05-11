@@ -1,129 +1,53 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { readFileSync } from 'fs';
-import { join } from 'path';
 import { BOOK_MAP } from '@/lib/bible-api';
 
-type BibleData = {
-  books: Record<string, Record<string, Record<string, string>>>;
+// YouVersion Platform bible IDs — verify at https://api.youversion.com/v1/bibles
+const VERSION_IDS: Record<string, number> = {
+  rvr1960: 149,
+  ntv: 127,
+  tla: 128,
+  blp: 4030,
 };
 
-const CODE_TO_JSON_KEY: Record<string, string> = {
-  GEN: 'genesis',
-  EXO: 'exodo',
-  LEV: 'levitico',
-  NUM: 'numeros',
-  DEU: 'deuteronomio',
-  JOS: 'josue',
-  JDG: 'jueces',
-  RUT: 'rut',
-  '1SA': '1samuel',
-  '2SA': '2samuel',
-  '1KI': '1reyes',
-  '2KI': '2reyes',
-  '1CH': '1cronicas',
-  '2CH': '2cronicas',
-  EZR: 'esdras',
-  NEH: 'nehemias',
-  EST: 'ester',
-  JOB: 'job',
-  PSA: 'salmos',
-  PRO: 'proverbios',
-  ECC: 'eclesiastes',
-  SNG: 'cantares',
-  ISA: 'isaias',
-  JER: 'jeremias',
-  LAM: 'lamentaciones',
-  EZK: 'ezequiel',
-  DAN: 'daniel',
-  HOS: 'oseas',
-  JOL: 'joel',
-  AMO: 'amos',
-  OBA: 'abdias',
-  JON: 'jonas',
-  MIC: 'miqueas',
-  NAM: 'nahum',
-  HAB: 'habacuc',
-  ZEP: 'sofonias',
-  HAG: 'hageo',
-  ZEC: 'zacarias',
-  MAL: 'malaquias',
-  MAT: 'mateo',
-  MRK: 'marcos',
-  LUK: 'lucas',
-  JHN: 'juan',
-  ACT: 'hechos',
-  ROM: 'romanos',
-  '1CO': '1corintios',
-  '2CO': '2corintios',
-  GAL: 'galatas',
-  EPH: 'efesios',
-  PHP: 'filipenses',
-  COL: 'colosenses',
-  '1TH': '1tesalonicenses',
-  '2TH': '2tesalonicenses',
-  '1TI': '1timoteo',
-  '2TI': '2timoteo',
-  TIT: 'tito',
-  PHM: 'filemon',
-  HEB: 'hebreos',
-  JAS: 'santiago',
-  '1PE': '1pedro',
-  '2PE': '2pedro',
-  '1JN': '1juan',
-  '2JN': '2juan',
-  '3JN': '3juan',
-  JUD: 'judas',
-  REV: 'apocalipsis',
-};
-
-// Case-insensitive lookup map built once from BOOK_MAP
 const BOOK_MAP_CI: Record<string, string> = Object.fromEntries(
   Object.entries(BOOK_MAP).map(([k, v]) => [k.toLowerCase(), v]),
 );
 
-let bibleCache: BibleData | null = null;
-
-function getBibleData(): BibleData {
-  if (!bibleCache) {
-    const filePath = join(process.cwd(), 'public', 'bible.json');
-    bibleCache = JSON.parse(readFileSync(filePath, 'utf-8')) as BibleData;
-  }
-  return bibleCache;
-}
-
 function parseRef(ref: string): {
-  jsonKey: string;
+  bookCode: string;
   displayBook: string;
-  chapters: number[];
+  chapter: number;
   startVerse: number;
   endVerse: number | null;
 } | null {
   const decoded = decodeURIComponent(ref).replace(/\+/g, ' ');
 
+  // "Book N:S-E" → single chapter, verse range
   const matchVerse = decoded.match(/^(.*?)\s+(\d+):(\d+)(?:-(\d+))?$/);
+  // "Book N-M" → multi-chapter whole
   const matchChapterRange = decoded.match(/^(.*?)\s+(\d+)-(\d+)$/);
+  // "Book N" → whole chapter
   const matchChapter = decoded.match(/^(.*?)\s+(\d+)$/);
 
   let bookRaw: string;
-  let chapters: number[];
+  let chapter: number;
   let startVerse: number;
   let endVerse: number | null;
 
   if (matchVerse) {
     bookRaw = matchVerse[1]!;
-    chapters = [parseInt(matchVerse[2]!, 10)];
+    chapter = parseInt(matchVerse[2]!, 10);
     startVerse = parseInt(matchVerse[3]!, 10);
     endVerse = matchVerse[4] ? parseInt(matchVerse[4], 10) : startVerse;
   } else if (matchChapterRange) {
+    // Multi-chapter: treat as chapter=first, full range
     bookRaw = matchChapterRange[1]!;
-    const ch1 = parseInt(matchChapterRange[2]!, 10);
-    const ch2 = parseInt(matchChapterRange[3]!, 10);
-    chapters = Array.from({ length: ch2 - ch1 + 1 }, (_, i) => ch1 + i);
+    chapter = parseInt(matchChapterRange[2]!, 10);
     startVerse = 1;
     endVerse = null;
   } else if (matchChapter) {
     bookRaw = matchChapter[1]!;
-    chapters = [parseInt(matchChapter[2]!, 10)];
+    chapter = parseInt(matchChapter[2]!, 10);
     startVerse = 1;
     endVerse = null;
   } else {
@@ -131,66 +55,92 @@ function parseRef(ref: string): {
   }
 
   const trimmedBook = bookRaw.trim();
-  const code =
+  const bookCode =
     BOOK_MAP[trimmedBook] ?? BOOK_MAP_CI[trimmedBook.toLowerCase()] ?? trimmedBook.toUpperCase();
-  const jsonKey = CODE_TO_JSON_KEY[code] ?? trimmedBook.toLowerCase();
 
-  return { jsonKey, displayBook: trimmedBook, chapters, startVerse, endVerse };
+  return { bookCode, displayBook: trimmedBook, chapter, startVerse, endVerse };
 }
 
+function toUsfm(
+  bookCode: string,
+  chapter: number,
+  startVerse: number,
+  endVerse: number | null,
+): string {
+  const base = `${bookCode}.${chapter}`;
+  if (endVerse === null) return base;
+  if (endVerse === startVerse) return `${base}.${startVerse}`;
+  return `${base}.${startVerse}-${bookCode}.${chapter}.${endVerse}`;
+}
+
+type YouVersionVerse = {
+  usfm: string;
+  text: string;
+};
+
+type YouVersionPassageResponse = {
+  verses?: YouVersionVerse[];
+  passage?: string;
+  canonical?: string;
+};
+
 export async function GET(req: NextRequest) {
+  if (!process.env.YOUVERSION_API_KEY) {
+    return NextResponse.json({ error: 'Missing YOUVERSION_API_KEY' }, { status: 500 });
+  }
+
   const refParam = req.nextUrl.searchParams.get('ref');
   if (!refParam) {
     return NextResponse.json({ error: 'Falta parámetro ref' }, { status: 400 });
   }
+
+  const versionParam = (req.nextUrl.searchParams.get('version') ?? 'rvr1960').toLowerCase();
+  const bibleId = VERSION_IDS[versionParam] ?? VERSION_IDS.rvr1960!;
 
   const parsed = parseRef(refParam);
   if (!parsed) {
     return NextResponse.json({ error: 'Referencia bíblica inválida' }, { status: 400 });
   }
 
-  const { jsonKey, displayBook, chapters, startVerse, endVerse } = parsed;
+  const { bookCode, displayBook, chapter, startVerse, endVerse } = parsed;
+  const usfm = toUsfm(bookCode, chapter, startVerse, endVerse);
 
-  try {
-    const data = getBibleData();
-    const bookData = data.books[jsonKey];
-    if (!bookData) {
-      return NextResponse.json({ error: 'Libro no encontrado' }, { status: 404 });
-    }
+  const apiUrl =
+    `https://api.youversion.com/v1/verse` +
+    `?usfm=${encodeURIComponent(usfm)}&version_id=${bibleId}`;
 
-    const parts: string[] = [];
-    for (const ch of chapters) {
-      const chapterData = bookData[String(ch)];
-      if (!chapterData) continue;
-      const verseNums = Object.keys(chapterData)
-        .map(Number)
-        .sort((a, b) => a - b);
-      for (const v of verseNums) {
-        if (v < startVerse) continue;
-        if (endVerse !== null && v > endVerse) break;
-        const text = chapterData[String(v)];
-        if (text) parts.push(`${v} ${text.trim()}`);
-      }
-    }
+  const res = await fetch(apiUrl, {
+    headers: { 'X-YVP-App-Key': process.env.YOUVERSION_API_KEY },
+    next: { revalidate: 86400 },
+  });
 
-    if (parts.length === 0) {
-      return NextResponse.json(
-        { error: 'Versos no encontrados en el rango indicado' },
-        { status: 404 },
-      );
-    }
-
-    let reference: string;
-    if (chapters.length > 1) {
-      reference = `${displayBook} ${chapters[0]}-${chapters[chapters.length - 1]}`;
-    } else if (endVerse === null) {
-      reference = `${displayBook} ${chapters[0]}`;
-    } else {
-      reference = `${displayBook} ${chapters[0]}:${startVerse}${endVerse !== startVerse ? `-${endVerse}` : ''}`;
-    }
-
-    return NextResponse.json({ text: parts.join(' '), reference });
-  } catch {
-    return NextResponse.json({ error: 'Error al leer la Biblia' }, { status: 500 });
+  if (!res.ok) {
+    return NextResponse.json({ error: `YouVersion API error ${res.status}` }, { status: 502 });
   }
+
+  const data = (await res.json()) as YouVersionPassageResponse;
+
+  let text: string;
+
+  if (data.verses && data.verses.length > 0) {
+    text = data.verses
+      .map((v) => {
+        const verseNum = v.usfm.split('.')[2] ?? '';
+        return verseNum ? `${verseNum} ${v.text.trim()}` : v.text.trim();
+      })
+      .join(' ');
+  } else if (data.passage) {
+    text = data.passage.trim();
+  } else {
+    return NextResponse.json({ error: 'Versos no encontrados' }, { status: 404 });
+  }
+
+  const reference =
+    endVerse === null
+      ? `${displayBook} ${chapter}`
+      : endVerse === startVerse
+        ? `${displayBook} ${chapter}:${startVerse}`
+        : `${displayBook} ${chapter}:${startVerse}-${endVerse}`;
+
+  return NextResponse.json({ text, reference });
 }

@@ -25,7 +25,8 @@ export type DailyEntryData = {
   rawReadings: string;
   readings: ReadingData[];
   response: ResponseData | null;
-  missionText: string | null;
+  visionText: string | null;
+  strategyText: string | null;
 };
 
 export const SECTION_KEYS = [

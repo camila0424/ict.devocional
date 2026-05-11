@@ -25,7 +25,7 @@ async function getHomeData(userId: string) {
     }),
     prisma.devotionalPlan.findUnique({
       where: { month_year: { month, year } },
-      select: { missionText: true },
+      select: { visionText: true },
     }),
   ]);
 
@@ -49,7 +49,7 @@ async function getHomeData(userId: string) {
     month,
     year,
     totalCompleted,
-    missionText: plan?.missionText ?? null,
+    missionText: plan?.visionText ?? null,
   };
 }
 

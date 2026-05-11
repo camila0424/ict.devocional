@@ -108,14 +108,15 @@ export function HomeClient({
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
-        className="rounded-2xl p-4"
-        style={{ background: 'linear-gradient(135deg, #dbeafe, #eff6ff)' }}
+        className="rounded-2xl bg-blue-50 p-4 dark:bg-blue-950/40"
       >
         <div className="mb-2 flex items-center gap-2">
           <span className="text-lg">💬</span>
-          <h2 className="font-bold text-blue-900">Frase del día</h2>
+          <h2 className="font-bold text-blue-900 dark:text-blue-200">Frase del día</h2>
         </div>
-        <p className="text-sm leading-relaxed text-blue-800 italic">{getFraseDelDia()}</p>
+        <p className="text-sm leading-relaxed text-blue-800 italic dark:text-blue-300">
+          {getFraseDelDia()}
+        </p>
       </motion.div>
 
       {/* Misión de Mayo */}
@@ -123,10 +124,10 @@ export function HomeClient({
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.35, duration: 0.3 }}
-        className="rounded-2xl border border-blue-200 bg-blue-50 p-4"
+        className="rounded-2xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950/40"
       >
-        <h2 className="mb-2 font-bold text-blue-900">🎯 Misión de Mayo</h2>
-        <p className="text-sm leading-relaxed text-gray-600">
+        <h2 className="mb-2 font-bold text-blue-900 dark:text-blue-200">🎯 Misión de Mayo</h2>
+        <p className="text-foreground/80 text-sm leading-relaxed">
           {missionText || '🙏 La misión de este mes estará disponible pronto. ¡Mantente atento!'}
         </p>
       </motion.div>
@@ -167,8 +168,8 @@ export function HomeClient({
                   whileTap={{ scale: 0.9 }}
                   className={cn(
                     'flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold transition-colors',
-                    isToday && !done && 'bg-[var(--color-primary)] text-white',
-                    done && 'bg-[var(--color-success)] text-white',
+                    isToday && !done && 'bg-primary text-white',
+                    done && 'bg-success text-white',
                     !isToday && !done && 'text-muted hover:bg-border',
                   )}
                 >

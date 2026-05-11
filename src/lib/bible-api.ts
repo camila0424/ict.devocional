@@ -262,9 +262,12 @@ export const BOOK_MAP: Record<string, string> = {
   Revelation: 'REV',
 };
 
-export async function fetchBibleText(verseRef: string): Promise<BibleTextResult> {
+export async function fetchBibleText(
+  verseRef: string,
+  version = 'rvr1960',
+): Promise<BibleTextResult> {
   const slug = encodeURIComponent(verseRef.trim());
-  const res = await fetch(`/api/bible?ref=${slug}`);
+  const res = await fetch(`/api/bible?ref=${slug}&version=${version}`);
   if (!res.ok) {
     const err = (await res.json().catch(() => ({}))) as { error?: string };
     throw new Error(err.error ?? 'No se pudo cargar el texto bíblico');

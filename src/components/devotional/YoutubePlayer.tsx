@@ -123,7 +123,7 @@ export function YoutubePlayer({
       <div className="border-border bg-surface rounded-2xl border p-5 text-center">
         <div className="mb-2 text-4xl">🙏</div>
         <p className="text-sm font-semibold">El video de hoy aún no se ha publicado</p>
-        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+        <p className="text-muted mt-1 text-xs">
           Mientras tanto, medita en la Palabra de Dios y permite que Su voz hable a tu corazón.
         </p>
       </div>
@@ -137,13 +137,13 @@ export function YoutubePlayer({
       <div className="aspect-video w-full overflow-hidden rounded-xl [&>iframe]:h-full [&>iframe]:w-full">
         <div ref={playerContainerRef} className="h-full w-full" />
       </div>
-      <p className="mt-2 text-xs leading-snug text-gray-500 dark:text-gray-400">{video.title}</p>
+      <p className="text-muted mt-2 text-xs leading-snug">{video.title}</p>
       {completed ? (
         <p className="mt-3 text-center text-sm font-semibold text-green-600 dark:text-green-400">
           ✓ Video completado
         </p>
       ) : (
-        <p className="mt-3 text-center text-sm text-gray-400 dark:text-gray-500">
+        <p className="text-muted mt-3 text-center text-sm">
           ▶ Mira el video completo para continuar
         </p>
       )}

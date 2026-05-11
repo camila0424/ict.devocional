@@ -12,18 +12,19 @@ type Body = {
   month: number;
   year: number;
   title: string;
-  missionText?: string;
+  visionText?: string;
+  strategyText?: string;
   days: DayInput[];
 };
 
 export async function POST(req: NextRequest) {
   const body: Body = await req.json();
-  const { month, year, title, missionText, days } = body;
+  const { month, year, title, visionText, strategyText, days } = body;
 
   const plan = await prisma.devotionalPlan.upsert({
     where: { month_year: { month, year } },
-    update: { title, missionText },
-    create: { month, year, title, missionText },
+    update: { title, visionText, strategyText },
+    create: { month, year, title, visionText, strategyText },
   });
 
   for (const d of days) {
