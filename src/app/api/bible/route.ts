@@ -105,9 +105,7 @@ export async function GET(req: NextRequest) {
   const { bookCode, displayBook, chapter, startVerse, endVerse } = parsed;
   const usfm = toUsfm(bookCode, chapter, startVerse, endVerse);
 
-  const apiUrl =
-    `https://api.youversion.com/v1/verse` +
-    `?usfm=${encodeURIComponent(usfm)}&version_id=${bibleId}`;
+  const apiUrl = `https://api.youversion.com/v1/bibles/${bibleId}/passages/${encodeURIComponent(usfm)}`;
 
   const res = await fetch(apiUrl, {
     headers: { 'X-YVP-App-Key': process.env.YOUVERSION_API_KEY },
