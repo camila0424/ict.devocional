@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { BOOK_MAP } from '@/lib/bible-api';
 
-// YouVersion Platform bible IDs — verify at https://api.youversion.com/v1/bibles
+// YouVersion bible IDs — sourced from bible.com/versions/<id>
 const VERSION_IDS: Record<string, number> = {
   rvr1960: 149,
   ntv: 127,
-  tla: 128,
-  blp: 4030,
+  tla: 176,
+  blp: 210,
 };
 
 const BOOK_MAP_CI: Record<string, string> = Object.fromEntries(
@@ -115,7 +115,12 @@ export async function GET(req: NextRequest) {
   });
 
   if (!res.ok) {
-    return NextResponse.json({ error: `YouVersion API error ${res.status}` }, { status: 502 });
+    const errBody = await res.text().catch(() => '(no body)');
+    console.error('[bible] YouVersion error', res.status, usfm, errBody);
+    return NextResponse.json(
+      { error: `YouVersion API error ${res.status}`, detail: errBody },
+      { status: 502 },
+    );
   }
 
   const data = (await res.json()) as YouVersionPassageResponse;
