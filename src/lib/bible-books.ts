@@ -211,6 +211,12 @@ function buildSegments(ref: string): Seg[] {
     const [, c1, c2] = mc.map(Number);
     return Array.from({ length: c2! - c1! + 1 }, (_, i) => ({ c: c1! + i, v1: 1, v2: null }));
   }
+  // "42:1" — single chapter with start verse, reads to end of chapter
+  const sv = ref.match(/^(\d+):(\d+)$/);
+  if (sv) {
+    const [, c, v1] = sv.map(Number);
+    return [{ c: c!, v1: v1!, v2: null }];
+  }
   // "14"
   const sc = ref.match(/^(\d+)$/);
   if (sc) return [{ c: +sc[1]!, v1: 1, v2: null }];
