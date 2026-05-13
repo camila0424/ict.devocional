@@ -12,16 +12,16 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: '#1E40AF',
     icons: [
       {
-        src: '/icons/Logo_mobil_fondo_blanco.png',
+        src: '/icons/Logo_mobil_fondo_azul.png',
         sizes: '192x192',
         type: 'image/png',
-        purpose: 'any',
+        purpose: 'maskable',
       },
       {
-        src: '/icons/Logo_mobil_fondo_blanco.png',
+        src: '/icons/Logo_mobil_fondo_azul.png',
         sizes: '512x512',
         type: 'image/png',
-        purpose: 'any',
+        purpose: 'maskable',
       },
     ],
     categories: ['lifestyle', 'education'],

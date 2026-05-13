@@ -1,0 +1,77 @@
+import { NextRequest, NextResponse } from 'next/server';
+import Anthropic from '@anthropic-ai/sdk';
+
+export async function POST(req: NextRequest) {
+  const secret = req.headers.get('x-admin-secret');
+  if (!process.env.ADMIN_SECRET || secret !== process.env.ADMIN_SECRET) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return NextResponse.json(
+      { error: 'ANTHROPIC_API_KEY no configurada en el servidor' },
+      { status: 500 },
+    );
+  }
+
+  const { imageBase64, mimeType } = await req.json();
+  if (!imageBase64) {
+    return NextResponse.json({ error: 'imageBase64 requerido' }, { status: 400 });
+  }
+
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+  const response = await client.messages.create({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 2000,
+    messages: [
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'image',
+            source: {
+              type: 'base64',
+              media_type:
+                (mimeType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp') ||
+                'image/jpeg',
+              data: imageBase64,
+            },
+          },
+          {
+            type: 'text',
+            text: `Eres un extractor de datos de planes devocionales de la iglesia ICT.
+
+Analiza esta imagen del plan devocional mensual y extrae TODOS los días con sus 3 lecturas.
+
+Responde SOLO con JSON válido, sin texto adicional ni backticks:
+{
+  "month": "Mayo",
+  "month_num": 5,
+  "year": 2026,
+  "days": [
+    { "day": 1, "reading_1": "He 14", "reading_2": "Jos 22", "reading_3": "Job 31" }
+  ]
+}
+
+Usa las abreviaturas exactas de la imagen. Extrae TODOS los días.`,
+          },
+        ],
+      },
+    ],
+  });
+
+  const firstBlock = response.content[0];
+  const rawText = firstBlock?.type === 'text' ? firstBlock.text.trim() : '';
+  const cleaned = rawText.replace(/```json|```/g, '').trim();
+
+  try {
+    const data = JSON.parse(cleaned);
+    return NextResponse.json(data);
+  } catch {
+    return NextResponse.json(
+      { error: 'No se pudo parsear la respuesta de Claude', raw: rawText },
+      { status: 422 },
+    );
+  }
+}

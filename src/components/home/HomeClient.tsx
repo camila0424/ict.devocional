@@ -16,7 +16,8 @@ type Props = {
   streak: { current: number; best: number };
   todayCompleted: boolean;
   completedDays: number[];
-  missionText?: string | null;
+  visionText?: string | null;
+  strategyText?: string | null;
 };
 
 const DAYS_IN_MAY = 31;
@@ -24,13 +25,23 @@ const WEEK_LABELS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 // 1 May 2026 = Friday → offset 4 (L=0)
 const MAY_2026_OFFSET = 4;
 
+function parsePlanText(text: string | null | undefined): { label: string; passage: string } | null {
+  if (!text) return null;
+  const newlineIdx = text.indexOf('\n');
+  if (newlineIdx === -1) return { label: '', passage: text.trim() };
+  const label = text.slice(0, newlineIdx).replace(/:$/, '').trim();
+  const passage = text.slice(newlineIdx + 1).trim();
+  return { label, passage };
+}
+
 export function HomeClient({
   userName,
   day,
   streak,
   todayCompleted,
   completedDays,
-  missionText,
+  visionText,
+  strategyText,
 }: Props) {
   const [videoOpen, setVideoOpen] = useState(false);
   const days = Array.from({ length: DAYS_IN_MAY }, (_, i) => i + 1);
@@ -136,24 +147,61 @@ export function HomeClient({
         </p>
       </motion.div>
 
-      {/* Misión de Mayo */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.35, duration: 0.3 }}
-        className="rounded-2xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950/40"
-      >
-        <h2 className="mb-2 font-bold text-blue-900 dark:text-blue-200">🎯 Misión de Mayo</h2>
-        <p className="text-foreground/80 text-sm leading-relaxed">
-          {missionText || '🙏 La misión de este mes estará disponible pronto. ¡Mantente atento!'}
-        </p>
-      </motion.div>
+      {/* Visión del mes */}
+      {(() => {
+        const vision = parsePlanText(visionText);
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.35, duration: 0.3 }}
+            className="rounded-2xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950/40"
+          >
+            <div className="mb-2 flex items-center gap-2">
+              <span className="text-base">🌎</span>
+              <h2 className="font-bold text-blue-900 dark:text-blue-200">
+                Visión
+                {vision?.label ? <span className="ml-1 font-extrabold">{vision.label}</span> : null}
+              </h2>
+            </div>
+            <p className="text-foreground/80 text-sm leading-relaxed">
+              {vision?.passage || '🙏 La visión de este mes estará disponible pronto.'}
+            </p>
+          </motion.div>
+        );
+      })()}
+
+      {/* Estrategia del mes */}
+      {(() => {
+        const strategy = parsePlanText(strategyText);
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4, duration: 0.3 }}
+            className="rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/30"
+          >
+            <div className="mb-2 flex items-center gap-2">
+              <span className="text-base">🧭</span>
+              <h2 className="font-bold text-amber-900 dark:text-amber-200">
+                Estrategia del mes
+                {strategy?.label ? (
+                  <span className="ml-1 font-extrabold">{strategy.label}</span>
+                ) : null}
+              </h2>
+            </div>
+            <p className="text-foreground/80 text-sm leading-relaxed">
+              {strategy?.passage || '📌 La estrategia de este mes estará disponible pronto.'}
+            </p>
+          </motion.div>
+        );
+      })()}
 
       {/* Calendario Mayo */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4, duration: 0.3 }}
+        transition={{ delay: 0.45, duration: 0.3 }}
         className="border-border bg-surface rounded-2xl border p-4"
       >
         <div className="mb-3 flex items-center justify-between">

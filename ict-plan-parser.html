@@ -275,6 +275,7 @@
 
 <script>
 let imageBase64 = null;
+let currentMimeType = 'image/jpeg';
 let parsedData = null;
 
 // ── Drag & Drop ──────────────────────────────────────────
@@ -291,6 +292,7 @@ dropZone.addEventListener('drop', e => {
 fileInput.addEventListener('change', e => { if (e.target.files[0]) loadImage(e.target.files[0]); });
 
 function loadImage(file) {
+  currentMimeType = file.type || 'image/jpeg';
   const reader = new FileReader();
   reader.onload = ev => {
     imageBase64 = ev.target.result.split(',')[1];
@@ -308,46 +310,28 @@ document.getElementById('parseBtn').addEventListener('click', analyzeImage);
 
 async function analyzeImage() {
   if (!imageBase64) return;
+  const appUrl = document.getElementById('appUrl').value.trim().replace(/\/$/, '');
+  const secret = document.getElementById('adminSecret').value.trim();
+  if (!appUrl) { setStatus('statusAnalisis', 'error', '⚠ Falta la URL de la app.'); return; }
+  if (!secret)  { setStatus('statusAnalisis', 'error', '⚠ Falta el Admin Secret.'); return; }
+
   setParseLoading(true);
   setStatus('statusAnalisis', 'loading', '🔍 Claude está leyendo el plan devocional...');
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch(`${appUrl}/api/admin/analyze-image`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 2000,
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: imageBase64 } },
-            {
-              type: 'text',
-              text: `Eres un extractor de datos de planes devocionales de la iglesia ICT.
-
-Analiza esta imagen del plan devocional mensual y extrae TODOS los días con sus 3 lecturas.
-
-Responde SOLO con JSON válido, sin texto adicional ni backticks:
-{
-  "month": "Mayo",
-  "month_num": 5,
-  "year": 2026,
-  "days": [
-    { "day": 1, "reading_1": "He 14", "reading_2": "Jos 22", "reading_3": "Job 31" }
-  ]
-}
-
-Usa las abreviaturas exactas de la imagen. Extrae TODOS los días.`
-            }
-          ]
-        }]
-      })
+      headers: {
+        'Content-Type': 'application/json',
+        'x-admin-secret': secret,
+      },
+      body: JSON.stringify({ imageBase64, mimeType: currentMimeType }),
     });
 
     const data = await res.json();
-    const text = data.content[0].text.trim().replace(/```json|```/g, '').trim();
-    parsedData = JSON.parse(text);
+    if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
+
+    parsedData = data;
     showPreview(parsedData);
     setStatus('statusAnalisis', '', '');
   } catch (err) {
