@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, x-admin-secret',
+};
+
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: CORS });
+}
+
 type EntryInput = {
   day: number;
   readings: string[];
@@ -17,17 +27,23 @@ type Body = {
 export async function POST(req: NextRequest) {
   const secret = req.headers.get('x-admin-secret');
   if (!process.env.ADMIN_SECRET || secret !== process.env.ADMIN_SECRET) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: CORS });
   }
 
   const body: Body = await req.json();
   const { month, year, visionText, strategyText, entries } = body;
 
   if (!month || !year) {
-    return NextResponse.json({ error: 'month y year son requeridos' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'month y year son requeridos' },
+      { status: 400, headers: CORS },
+    );
   }
   if (!Array.isArray(entries)) {
-    return NextResponse.json({ error: 'entries debe ser un array' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'entries debe ser un array' },
+      { status: 400, headers: CORS },
+    );
   }
 
   const plan = await prisma.devotionalPlan.upsert({
@@ -67,5 +83,5 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  return NextResponse.json({ success: true, planId: plan.id });
+  return NextResponse.json({ success: true, planId: plan.id }, { headers: CORS });
 }

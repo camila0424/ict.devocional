@@ -1,22 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, x-admin-secret',
+};
+
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: CORS });
+}
+
 export async function POST(req: NextRequest) {
   const secret = req.headers.get('x-admin-secret');
   if (!process.env.ADMIN_SECRET || secret !== process.env.ADMIN_SECRET) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: CORS });
   }
 
   if (!process.env.ANTHROPIC_API_KEY) {
     return NextResponse.json(
       { error: 'ANTHROPIC_API_KEY no configurada en el servidor' },
-      { status: 500 },
+      { status: 500, headers: CORS },
     );
   }
 
   const { imageBase64, mimeType } = await req.json();
   if (!imageBase64) {
-    return NextResponse.json({ error: 'imageBase64 requerido' }, { status: 400 });
+    return NextResponse.json({ error: 'imageBase64 requerido' }, { status: 400, headers: CORS });
   }
 
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -67,11 +77,11 @@ Usa las abreviaturas exactas de la imagen. Extrae TODOS los días.`,
 
   try {
     const data = JSON.parse(cleaned);
-    return NextResponse.json(data);
+    return NextResponse.json(data, { headers: CORS });
   } catch {
     return NextResponse.json(
       { error: 'No se pudo parsear la respuesta de Claude', raw: rawText },
-      { status: 422 },
+      { status: 422, headers: CORS },
     );
   }
 }
