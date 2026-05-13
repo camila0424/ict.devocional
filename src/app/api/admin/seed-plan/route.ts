@@ -1,54 +1,68 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
-type DayInput = {
+type EntryInput = {
   day: number;
-  date: string;
-  readings: { order: number; bookAbbr: string; bookFull: string; reference: string }[];
-  youtubeVideoId?: string;
+  readings: string[];
 };
 
 type Body = {
   month: number;
   year: number;
-  title: string;
-  visionText?: string;
-  strategyText?: string;
-  days: DayInput[];
+  visionText?: string | null;
+  strategyText?: string | null;
+  entries: EntryInput[];
 };
 
 export async function POST(req: NextRequest) {
+  const secret = req.headers.get('x-admin-secret');
+  if (!process.env.ADMIN_SECRET || secret !== process.env.ADMIN_SECRET) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const body: Body = await req.json();
-  const { month, year, title, visionText, strategyText, days } = body;
+  const { month, year, visionText, strategyText, entries } = body;
+
+  if (!month || !year || !Array.isArray(entries) || entries.length === 0) {
+    return NextResponse.json({ error: 'month, year y entries son requeridos' }, { status: 400 });
+  }
 
   const plan = await prisma.devotionalPlan.upsert({
     where: { month_year: { month, year } },
-    update: { title, visionText, strategyText },
-    create: { month, year, title, visionText, strategyText },
+    update: { visionText: visionText ?? undefined, strategyText: strategyText ?? undefined },
+    create: {
+      month,
+      year,
+      title: `Plan devocional ${month}/${year}`,
+      visionText: visionText ?? undefined,
+      strategyText: strategyText ?? undefined,
+    },
   });
 
-  for (const d of days) {
+  for (const e of entries) {
+    const date = new Date(year, month - 1, e.day);
+    const rawReadings = e.readings.join(', ');
+
     const entry = await prisma.dailyEntry.upsert({
-      where: { planId_dayNumber: { planId: plan.id, dayNumber: d.day } },
-      update: {
-        date: new Date(d.date),
-        rawReadings: d.readings.map((r) => r.reference).join(', '),
-        youtubeVideoId: d.youtubeVideoId ?? null,
-      },
-      create: {
-        planId: plan.id,
-        dayNumber: d.day,
-        date: new Date(d.date),
-        rawReadings: d.readings.map((r) => r.reference).join(', '),
-        youtubeVideoId: d.youtubeVideoId ?? null,
-      },
+      where: { planId_dayNumber: { planId: plan.id, dayNumber: e.day } },
+      update: { date, rawReadings },
+      create: { planId: plan.id, dayNumber: e.day, date, rawReadings },
     });
 
     await prisma.reading.deleteMany({ where: { dailyEntryId: entry.id } });
     await prisma.reading.createMany({
-      data: d.readings.map((r) => ({ ...r, dailyEntryId: entry.id })),
+      data: e.readings.map((ref, i) => {
+        const abbr = ref.split(' ')[0] || ref;
+        return {
+          dailyEntryId: entry.id,
+          order: i + 1,
+          reference: ref,
+          bookAbbr: abbr,
+          bookFull: abbr,
+        };
+      }),
     });
   }
 
-  return NextResponse.json({ ok: true, planId: plan.id });
+  return NextResponse.json({ success: true, planId: plan.id });
 }

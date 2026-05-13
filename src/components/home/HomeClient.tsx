@@ -1,8 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
-import { motion } from 'motion/react';
-import { ChevronRight, Trophy } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { ChevronRight, Trophy, X, PlayCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LevelCard } from '@/components/ui/LevelCard';
 import { getFraseDelDia } from '@/constants/phrases';
@@ -31,18 +32,34 @@ export function HomeClient({
   completedDays,
   missionText,
 }: Props) {
+  const [videoOpen, setVideoOpen] = useState(false);
   const days = Array.from({ length: DAYS_IN_MAY }, (_, i) => i + 1);
 
   return (
     <div className="flex flex-col gap-4 p-5 pb-8">
-      {/* Saludo */}
+      {/* Saludo + botón de video */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
+        className="flex items-start justify-between"
       >
-        <p className="text-muted text-sm">Buenos días 👋</p>
-        <h1 className="text-3xl font-extrabold">{userName}</h1>
+        <div>
+          <p className="text-muted text-sm">Buenos días 👋</p>
+          <h1 className="text-3xl font-extrabold">{userName}</h1>
+        </div>
+
+        <motion.button
+          whileTap={{ scale: 0.93 }}
+          onClick={() => setVideoOpen(true)}
+          aria-label="Consejos para tu devocional"
+          className="flex min-h-[44px] min-w-[44px] flex-col items-center justify-center gap-1 rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 shadow-sm"
+        >
+          <PlayCircle size={22} className="text-[var(--color-primary)]" />
+          <span className="max-w-[60px] text-center text-[10px] leading-tight font-semibold text-[var(--color-muted)]">
+            Consejos
+          </span>
+        </motion.button>
       </motion.div>
 
       {/* Racha card */}
@@ -180,6 +197,52 @@ export function HomeClient({
           })}
         </div>
       </motion.div>
+
+      {/* Modal: Consejos para tu devocional */}
+      <AnimatePresence>
+        {videoOpen && (
+          <motion.div
+            key="video-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4"
+            onClick={() => setVideoOpen(false)}
+          >
+            <motion.div
+              key="video-modal"
+              initial={{ scale: 0.88, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.88, opacity: 0, y: 20 }}
+              transition={{ type: 'spring', damping: 22, stiffness: 320 }}
+              className="relative w-full max-w-lg overflow-hidden rounded-2xl bg-black shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-4 py-3">
+                <p className="text-sm font-bold text-white">Consejos para tu devocional</p>
+                <button
+                  onClick={() => setVideoOpen(false)}
+                  aria-label="Cerrar video"
+                  className="flex h-11 w-11 items-center justify-center rounded-full text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Video */}
+              <video
+                src="/videos/pasos_para_un_devocional.mp4"
+                controls
+                autoPlay
+                playsInline
+                className="w-full"
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

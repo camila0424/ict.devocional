@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ICT — Admin Plan Devocional</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --blue: #1E40AF;
+    --blue-mid: #3B82F6;
+    --dark: #0F172A;
+    --surface: #1E293B;
+    --surface2: #273348;
+    --text: #F1F5F9;
+    --muted: #94A3B8;
+    --border: #334155;
+    --green: #22C55E;
+    --green-bg: #052e16;
+    --amber: #F59E0B;
+    --red: #f87171;
+    --red-bg: #2d0f0f;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--dark);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 2rem 1rem;
+  }
+
+  .container { max-width: 720px; margin: 0 auto; }
+
+  header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 2rem;
+  }
+
+  .logo {
+    width: 44px; height: 44px;
+    background: var(--blue);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; font-weight: 600; color: white;
+    flex-shrink: 0;
+  }
+
+  h1 { font-size: 20px; font-weight: 600; }
+  .subtitle { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+  .section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+  }
+
+  .section-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--muted);
+    margin-bottom: 1rem;
+  }
+
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted);
+    margin-bottom: 5px;
+  }
+
+  input[type=text], input[type=url], input[type=password], textarea {
+    width: 100%;
+    background: var(--dark);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    padding: 10px 12px;
+    outline: none;
+    transition: border-color .15s;
+    margin-bottom: 1rem;
+  }
+
+  input:focus, textarea:focus { border-color: var(--blue-mid); }
+  textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
+
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 500px) { .row { grid-template-columns: 1fr; } }
+
+  .drop-zone {
+    border: 1.5px dashed var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all .2s;
+    background: var(--dark);
+    position: relative;
+  }
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color: var(--blue-mid);
+    background: var(--surface2);
+  }
+  .drop-zone input[type=file] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .drop-zone h2 { font-size: 15px; font-weight: 500; margin-bottom: 4px; }
+  .drop-zone p { font-size: 13px; color: var(--muted); }
+  .preview-img {
+    width: 100%; max-height: 200px; object-fit: contain;
+    border-radius: 8px; margin-top: 1rem; display: none;
+  }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    border: none; border-radius: 10px;
+    padding: 12px 24px; font-size: 15px;
+    font-family: 'DM Sans', sans-serif; font-weight: 500;
+    cursor: pointer; transition: all .15s;
+    width: 100%; justify-content: center; margin-top: 1rem;
+    color: white;
+  }
+  .btn-blue { background: var(--blue); }
+  .btn-blue:hover:not(:disabled) { background: #1D4ED8; }
+  .btn-green { background: #16a34a; }
+  .btn-green:hover:not(:disabled) { background: #15803d; }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    display: none;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .status {
+    margin-top: 1rem;
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    display: none;
+    line-height: 1.6;
+  }
+  .status.loading { background: var(--surface2); color: var(--muted); display: flex; align-items: center; gap: 10px; }
+  .status.error { background: var(--red-bg); color: var(--red); display: block; border: 1px solid #7f1d1d; }
+  .status.success { background: var(--green-bg); color: var(--green); display: block; border: 1px solid #14532d; font-weight: 500; }
+
+  .preview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 8px;
+    margin-top: 1rem;
+  }
+  .day-card {
+    background: var(--dark);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+  .day-card .day-num {
+    font-weight: 600; color: var(--blue-mid);
+    font-size: 11px; text-transform: uppercase;
+    letter-spacing: .05em; margin-bottom: 4px;
+  }
+  .day-card .readings { color: var(--muted); line-height: 1.7; }
+
+  .plan-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--green-bg); color: var(--green);
+    padding: 4px 12px; border-radius: 20px;
+    font-size: 12px; font-weight: 600;
+    margin-bottom: 1rem;
+  }
+
+  #resultSection { display: none; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="logo">ICT</div>
+    <div>
+      <h1>Admin — Plan Devocional</h1>
+      <p class="subtitle">Sube la imagen → la app se actualiza automáticamente en Vercel</p>
+    </div>
+  </header>
+
+  <!-- Configuración -->
+  <div class="section">
+    <p class="section-title">⚙ Configuración del servidor</p>
+    <div class="row">
+      <div>
+        <label>URL de la app</label>
+        <input type="url" id="appUrl" value="https://ict-devocional.vercel.app" placeholder="https://tu-app.vercel.app">
+      </div>
+      <div>
+        <label>Admin Secret</label>
+        <input type="password" id="adminSecret" placeholder="Tu ADMIN_SECRET de Vercel">
+      </div>
+    </div>
+  </div>
+
+  <!-- Visión del mes -->
+  <div class="section">
+    <p class="section-title">👁 Visión del mes</p>
+    <label>Pasaje bíblico de la visión — el nombre de la cita en negrilla, el texto en regular</label>
+    <textarea id="visionTexto" placeholder="Ej: Juan 3:16 — Porque de tal manera amó Dios al mundo, que ha dado a su Hijo unigénito..."></textarea>
+    <label>Estrategia del mes</label>
+    <textarea id="estrategiaTexto" placeholder="Ej: Romanos 8:28 — Y sabemos que a los que aman a Dios, todas las cosas les ayudan a bien..."></textarea>
+  </div>
+
+  <!-- Imagen del plan -->
+  <div class="section">
+    <p class="section-title">📷 Imagen del plan devocional</p>
+    <div class="drop-zone" id="dropZone">
+      <input type="file" id="fileInput" accept="image/*">
+      <div style="font-size:28px;margin-bottom:8px;">📅</div>
+      <h2>Sube la imagen del mes</h2>
+      <p>Arrastra aquí o haz clic para seleccionar</p>
+      <img class="preview-img" id="preview" alt="Preview">
+    </div>
+
+    <button class="btn btn-blue" id="parseBtn" disabled>
+      <span class="spinner" id="spinnerParse"></span>
+      <span id="parseBtnText">🔍 Analizar imagen</span>
+    </button>
+    <div class="status" id="statusAnalisis"></div>
+  </div>
+
+  <!-- Resultado y subida -->
+  <div class="section" id="resultSection">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+      <p class="section-title" style="margin:0">✅ Plan detectado</p>
+      <span class="plan-badge" id="planBadge">31 días</span>
+    </div>
+
+    <div id="visionPreview" style="display:none;background:var(--dark);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;font-size:13px;line-height:1.7;">
+      <strong style="color:var(--amber);font-size:11px;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px;">👁 Visión del mes</strong>
+      <span id="visionPreviewText"></span>
+    </div>
+    <div id="estrategiaPreview" style="display:none;background:var(--dark);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:1rem;font-size:13px;line-height:1.7;">
+      <strong style="color:var(--blue-mid);font-size:11px;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px;">📌 Estrategia del mes</strong>
+      <span id="estrategiaPreviewText"></span>
+    </div>
+
+    <div class="preview-grid" id="daysGrid"></div>
+
+    <hr style="border:none;border-top:1px solid var(--border);margin:1.25rem 0;">
+
+    <button class="btn btn-green" id="uploadBtn">
+      <span class="spinner" id="spinnerUpload"></span>
+      <span id="uploadBtnText">🚀 Subir plan a la app</span>
+    </button>
+    <div class="status" id="statusUpload"></div>
+  </div>
+
+</div>
+
+<script>
+let imageBase64 = null;
+let parsedData = null;
+
+// ── Drag & Drop ──────────────────────────────────────────
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  if (e.dataTransfer.files[0]) loadImage(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', e => { if (e.target.files[0]) loadImage(e.target.files[0]); });
+
+function loadImage(file) {
+  const reader = new FileReader();
+  reader.onload = ev => {
+    imageBase64 = ev.target.result.split(',')[1];
+    document.getElementById('preview').src = ev.target.result;
+    document.getElementById('preview').style.display = 'block';
+    document.getElementById('parseBtn').disabled = false;
+    document.getElementById('resultSection').style.display = 'none';
+    setStatus('statusAnalisis', '', '');
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── Analizar imagen ──────────────────────────────────────
+document.getElementById('parseBtn').addEventListener('click', analyzeImage);
+
+async function analyzeImage() {
+  if (!imageBase64) return;
+  setParseLoading(true);
+  setStatus('statusAnalisis', 'loading', '🔍 Claude está leyendo el plan devocional...');
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2000,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: imageBase64 } },
+            {
+              type: 'text',
+              text: `Eres un extractor de datos de planes devocionales de la iglesia ICT.
+
+Analiza esta imagen del plan devocional mensual y extrae TODOS los días con sus 3 lecturas.
+
+Responde SOLO con JSON válido, sin texto adicional ni backticks:
+{
+  "month": "Mayo",
+  "month_num": 5,
+  "year": 2026,
+  "days": [
+    { "day": 1, "reading_1": "He 14", "reading_2": "Jos 22", "reading_3": "Job 31" }
+  ]
+}
+
+Usa las abreviaturas exactas de la imagen. Extrae TODOS los días.`
+            }
+          ]
+        }]
+      })
+    });
+
+    const data = await res.json();
+    const text = data.content[0].text.trim().replace(/```json|```/g, '').trim();
+    parsedData = JSON.parse(text);
+    showPreview(parsedData);
+    setStatus('statusAnalisis', '', '');
+  } catch (err) {
+    setStatus('statusAnalisis', 'error', '⚠ ' + (err.message || 'Error al analizar. Intenta con una imagen más nítida.'));
+    parsedData = null;
+  } finally {
+    setParseLoading(false);
+  }
+}
+
+function formatBiblePassage(text) {
+  // Formatea "Cita bíblica — texto" con la cita en negrilla y el texto en regular
+  // Acepta separadores: —, -, :, "
+  const match = text.match(/^([^—\-"]+[:\d]*)\s*[—\-"]\s*(.+)$/s);
+  if (match) {
+    return `<strong style="color:var(--text)">${match[1].trim()}</strong> — ${match[2].trim()}`;
+  }
+  return text;
+}
+
+function showPreview(data) {
+  const { month, year, days } = data;
+  document.getElementById('planBadge').textContent = `✓ ${days.length} días · ${month} ${year}`;
+
+  const vision = document.getElementById('visionTexto').value.trim();
+  const estrategia = document.getElementById('estrategiaTexto').value.trim();
+
+  const visionPreview = document.getElementById('visionPreview');
+  if (vision) {
+    document.getElementById('visionPreviewText').innerHTML = formatBiblePassage(vision);
+    visionPreview.style.display = 'block';
+  } else {
+    visionPreview.style.display = 'none';
+  }
+
+  const estrategiaPreview = document.getElementById('estrategiaPreview');
+  if (estrategia) {
+    document.getElementById('estrategiaPreviewText').innerHTML = formatBiblePassage(estrategia);
+    estrategiaPreview.style.display = 'block';
+  } else {
+    estrategiaPreview.style.display = 'none';
+  }
+
+  const grid = document.getElementById('daysGrid');
+  grid.innerHTML = days.slice(0, 6).map(d => `
+    <div class="day-card">
+      <div class="day-num">Día ${d.day}</div>
+      <div class="readings">${d.reading_1}<br>${d.reading_2}<br>${d.reading_3}</div>
+    </div>
+  `).join('') + (days.length > 6 ? `
+    <div class="day-card" style="display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px;">
+      +${days.length - 6} días más...
+    </div>
+  ` : '');
+
+  document.getElementById('resultSection').style.display = 'block';
+  document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth' });
+}
+
+// ── Subir a Vercel ───────────────────────────────────────
+document.getElementById('uploadBtn').addEventListener('click', uploadPlan);
+
+async function uploadPlan() {
+  const appUrl = document.getElementById('appUrl').value.trim().replace(/\/$/, '');
+  const secret = document.getElementById('adminSecret').value.trim();
+  const vision = document.getElementById('visionTexto').value.trim();
+  const estrategia = document.getElementById('estrategiaTexto').value.trim();
+
+  if (!appUrl) { setStatus('statusUpload', 'error', '⚠ Falta la URL de la app.'); return; }
+  if (!secret)  { setStatus('statusUpload', 'error', '⚠ Falta el Admin Secret.'); return; }
+  if (!parsedData) { setStatus('statusUpload', 'error', '⚠ Primero analiza una imagen.'); return; }
+
+  setUploadLoading(true);
+  setStatus('statusUpload', 'loading', '🚀 Subiendo plan a la app...');
+
+  try {
+    const body = {
+      month:        parsedData.month_num,
+      year:         parsedData.year,
+      visionText:   vision || null,
+      strategyText: estrategia || null,
+      entries:      parsedData.days.map(d => ({
+        day:      d.day,
+        readings: [d.reading_1, d.reading_2, d.reading_3].filter(Boolean),
+      })),
+    };
+
+    const res = await fetch(`${appUrl}/api/admin/seed-plan`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-admin-secret': secret,
+      },
+      body: JSON.stringify(body),
+    });
+
+    const json = await res.json();
+    if (!res.ok || !json.success) throw new Error(json.error || `Error ${res.status}`);
+
+    setStatus('statusUpload', 'success',
+      `✅ ¡Plan de ${parsedData.month} ${parsedData.year} subido! ${parsedData.days.length} días guardados en la app.`
+    );
+  } catch (err) {
+    setStatus('statusUpload', 'error', '⚠ ' + (err.message || 'Error al subir. Revisa la URL y el Admin Secret.'));
+  } finally {
+    setUploadLoading(false);
+  }
+}
+
+// ── Helpers ──────────────────────────────────────────────
+function setStatus(id, type, msg) {
+  const el = document.getElementById(id);
+  el.className = 'status' + (type ? ` ${type}` : '');
+  if (!type) { el.style.display = 'none'; return; }
+  if (type === 'loading') {
+    el.style.display = 'flex';
+    el.innerHTML = `<div class="spinner" style="display:block;border-top-color:var(--muted)"></div> ${msg}`;
+  } else {
+    el.style.display = 'block';
+    el.textContent = msg;
+  }
+}
+
+function setParseLoading(on) {
+  document.getElementById('parseBtn').disabled = on;
+  document.getElementById('spinnerParse').style.display = on ? 'block' : 'none';
+  document.getElementById('parseBtnText').textContent = on ? 'Analizando...' : '🔍 Analizar imagen';
+}
+
+function setUploadLoading(on) {
+  document.getElementById('uploadBtn').disabled = on;
+  document.getElementById('spinnerUpload').style.display = on ? 'block' : 'none';
+  document.getElementById('uploadBtnText').textContent = on ? 'Subiendo...' : '🚀 Subir plan a la app';
+}
+</script>
+</body>
+</html>
