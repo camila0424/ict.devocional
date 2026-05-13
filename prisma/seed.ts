@@ -80,18 +80,19 @@ async function main() {
     const date = new Date(2026, 4, day); // mes 4 = Mayo (0-indexed)
     const rawReadings = `${r1} / ${r2} / ${r3}`;
 
-    await prisma.dailyEntry.upsert({
+    const entry = await prisma.dailyEntry.upsert({
       where: { planId_dayNumber: { planId: plan.id, dayNumber: day } },
-      update: {},
-      create: {
-        planId: plan.id,
-        dayNumber: day,
-        date,
-        rawReadings,
-        readings: {
-          create: [parseReading(r1, 1), parseReading(r2, 2), parseReading(r3, 3)],
-        },
-      },
+      update: { rawReadings },
+      create: { planId: plan.id, dayNumber: day, date, rawReadings },
+    });
+
+    // Siempre re-crea las lecturas para corregir datos incorrectos previos
+    await prisma.reading.deleteMany({ where: { dailyEntryId: entry.id } });
+    await prisma.reading.createMany({
+      data: [parseReading(r1, 1), parseReading(r2, 2), parseReading(r3, 3)].map((r) => ({
+        ...r,
+        dailyEntryId: entry.id,
+      })),
     });
   }
 
