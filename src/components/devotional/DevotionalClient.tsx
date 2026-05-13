@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, BookOpen, X, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
-import { fetchBibleText } from '@/lib/bible-api';
+import { fetchBibleReading } from '@/services/bibleService';
 
 import { cn } from '@/lib/utils';
 import { Strings } from '@/constants/strings';
@@ -58,15 +58,7 @@ const EMPTY_RESPONSE: ResponseState = {
   completedAt: null,
 };
 
-type BibleVersion = 'rvr1960' | 'ntv' | 'tla' | 'blp';
 type ReadingItemUIState = 'idle' | 'loading' | 'open' | 'error';
-
-const BIBLE_VERSIONS: { id: BibleVersion; label: string }[] = [
-  { id: 'rvr1960', label: 'RVR1960' },
-  { id: 'ntv', label: 'NTV' },
-  { id: 'tla', label: 'TLA' },
-  { id: 'blp', label: 'BLP' },
-];
 
 function ReadingItem({
   reading,
@@ -78,26 +70,7 @@ function ReadingItem({
   onCheck: () => void;
 }) {
   const [status, setStatus] = useState<ReadingItemUIState>('idle');
-  const [versionTexts, setVersionTexts] = useState<Partial<Record<BibleVersion, string>>>({});
-  const [activeVersion, setActiveVersion] = useState<BibleVersion>('rvr1960');
-
-  const displayText = versionTexts[activeVersion] ?? null;
-
-  async function loadVersion(version: BibleVersion) {
-    if (versionTexts[version]) {
-      setActiveVersion(version);
-      return;
-    }
-    setStatus('loading');
-    setActiveVersion(version);
-    try {
-      const result = await fetchBibleText(`${reading.bookFull} ${reading.reference}`, version);
-      setVersionTexts((prev) => ({ ...prev, [version]: result.text }));
-      setStatus('open');
-    } catch {
-      setStatus('error');
-    }
-  }
+  const [text, setText] = useState<string | null>(null);
 
   async function toggle() {
     if (status === 'loading') return;
@@ -105,7 +78,18 @@ function ReadingItem({
       setStatus('idle');
       return;
     }
-    await loadVersion(activeVersion);
+    setStatus('loading');
+    try {
+      const data = await fetchBibleReading(`${reading.bookAbbr} ${reading.reference}`);
+      const formatted = data.chapters
+        .flatMap((ch) => ch.verses)
+        .map((v) => `${v.number} ${v.text}`)
+        .join('\n');
+      setText(formatted);
+      setStatus('open');
+    } catch {
+      setStatus('error');
+    }
   }
 
   return (
@@ -168,7 +152,7 @@ function ReadingItem({
       </div>
 
       <AnimatePresence initial={false}>
-        {status === 'open' && displayText && (
+        {status === 'open' && text && (
           <motion.div
             key="text"
             initial={{ height: 0, opacity: 0 }}
@@ -177,26 +161,8 @@ function ReadingItem({
             transition={{ duration: 0.22 }}
             className="overflow-hidden"
           >
-            {/* Version selector */}
-            <div className="flex gap-1.5 px-4 pt-3">
-              {BIBLE_VERSIONS.map(({ id, label }) => (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => loadVersion(id)}
-                  className={cn(
-                    'rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors',
-                    activeVersion === id
-                      ? 'bg-primary text-white'
-                      : 'bg-primary-light text-primary-dark hover:bg-primary/20',
-                  )}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
             <p className="text-foreground px-4 pt-2 pb-2 text-sm leading-relaxed whitespace-pre-wrap">
-              {displayText.split(/(\d+\s)/).map((part, i) =>
+              {text.split(/(\d+\s)/).map((part, i) =>
                 /^\d+\s$/.test(part) ? (
                   <span key={i} className="text-foreground/80 font-bold dark:text-white">
                     {part}
