@@ -24,6 +24,22 @@ type Body = {
   entries: EntryInput[];
 };
 
+// Splits "He 14", "1 Sam 1:1-2:11", "Salm 42" into { bookAbbr, reference }
+// so DevotionalClient can reassemble "${bookAbbr} ${reference}" correctly.
+function splitReading(raw: string): { bookAbbr: string; reference: string } {
+  const parts = raw.trim().split(' ');
+  if (parts[0] && /^\d$/.test(parts[0])) {
+    return {
+      bookAbbr: `${parts[0]} ${parts[1] ?? ''}`.trim(),
+      reference: parts.slice(2).join(' '),
+    };
+  }
+  return {
+    bookAbbr: parts[0] ?? '',
+    reference: parts.slice(1).join(' '),
+  };
+}
+
 export async function POST(req: NextRequest) {
   const secret = req.headers.get('x-admin-secret');
   if (!process.env.ADMIN_SECRET || secret !== process.env.ADMIN_SECRET) {
@@ -71,13 +87,13 @@ export async function POST(req: NextRequest) {
     await prisma.reading.deleteMany({ where: { dailyEntryId: entry.id } });
     await prisma.reading.createMany({
       data: e.readings.map((ref, i) => {
-        const abbr = ref.split(' ')[0] || ref;
+        const { bookAbbr, reference } = splitReading(ref);
         return {
           dailyEntryId: entry.id,
           order: i + 1,
-          reference: ref,
-          bookAbbr: abbr,
-          bookFull: abbr,
+          reference,
+          bookAbbr,
+          bookFull: bookAbbr,
         };
       }),
     });
