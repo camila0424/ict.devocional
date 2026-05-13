@@ -79,7 +79,24 @@
     margin-bottom: 5px;
   }
 
-  input[type=text], input[type=url], input[type=password], textarea {
+  select {
+    width: 100%;
+    background: var(--dark);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    padding: 10px 12px;
+    outline: none;
+    transition: border-color .15s;
+    margin-bottom: 1rem;
+    appearance: none;
+    cursor: pointer;
+  }
+  select:focus { border-color: var(--blue-mid); }
+
+  input[type=text], input[type=url], input[type=password], input[type=number], textarea {
     width: 100%;
     background: var(--dark);
     border: 1px solid var(--border);
@@ -217,6 +234,34 @@
     </div>
   </div>
 
+  <!-- Mes y año -->
+  <div class="section">
+    <p class="section-title">📅 Mes y año del plan</p>
+    <div class="row">
+      <div>
+        <label>Mes</label>
+        <select id="monthSelect">
+          <option value="1">Enero</option>
+          <option value="2">Febrero</option>
+          <option value="3">Marzo</option>
+          <option value="4">Abril</option>
+          <option value="5">Mayo</option>
+          <option value="6">Junio</option>
+          <option value="7">Julio</option>
+          <option value="8">Agosto</option>
+          <option value="9">Septiembre</option>
+          <option value="10">Octubre</option>
+          <option value="11">Noviembre</option>
+          <option value="12">Diciembre</option>
+        </select>
+      </div>
+      <div>
+        <label>Año</label>
+        <input type="number" id="yearInput" placeholder="2026" min="2020" max="2099">
+      </div>
+    </div>
+  </div>
+
   <!-- Visión del mes -->
   <div class="section">
     <p class="section-title">👁 Visión del mes</p>
@@ -228,7 +273,7 @@
 
   <!-- Imagen del plan -->
   <div class="section">
-    <p class="section-title">📷 Imagen del plan devocional</p>
+    <p class="section-title">📷 Imagen del plan devocional <span style="font-size:10px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0">(opcional)</span></p>
     <div class="drop-zone" id="dropZone">
       <input type="file" id="fileInput" accept="image/*">
       <div style="font-size:28px;margin-bottom:8px;">📅</div>
@@ -261,9 +306,11 @@
     </div>
 
     <div class="preview-grid" id="daysGrid"></div>
+  </div>
 
-    <hr style="border:none;border-top:1px solid var(--border);margin:1.25rem 0;">
-
+  <!-- Subir a la app (siempre visible) -->
+  <div class="section">
+    <p class="section-title">🚀 Subir a la app</p>
     <button class="btn btn-green" id="uploadBtn">
       <span class="spinner" id="spinnerUpload"></span>
       <span id="uploadBtnText">🚀 Subir plan a la app</span>
@@ -277,6 +324,13 @@
 let imageBase64 = null;
 let currentMimeType = 'image/jpeg';
 let parsedData = null;
+
+// Pre-fill current year on load
+window.addEventListener('DOMContentLoaded', () => {
+  const y = new Date().getFullYear();
+  document.getElementById('yearInput').value = y;
+  document.getElementById('monthSelect').value = new Date().getMonth() + 1;
+});
 
 // ── Drag & Drop ──────────────────────────────────────────
 const dropZone = document.getElementById('dropZone');
@@ -332,6 +386,8 @@ async function analyzeImage() {
     if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
 
     parsedData = data;
+    document.getElementById('monthSelect').value = data.month_num;
+    document.getElementById('yearInput').value = data.year;
     showPreview(parsedData);
     setStatus('statusAnalisis', '', '');
   } catch (err) {
@@ -399,24 +455,30 @@ async function uploadPlan() {
   const secret = document.getElementById('adminSecret').value.trim();
   const vision = document.getElementById('visionTexto').value.trim();
   const estrategia = document.getElementById('estrategiaTexto').value.trim();
+  const month = parseInt(document.getElementById('monthSelect').value, 10);
+  const year = parseInt(document.getElementById('yearInput').value, 10);
 
-  if (!appUrl) { setStatus('statusUpload', 'error', '⚠ Falta la URL de la app.'); return; }
-  if (!secret)  { setStatus('statusUpload', 'error', '⚠ Falta el Admin Secret.'); return; }
-  if (!parsedData) { setStatus('statusUpload', 'error', '⚠ Primero analiza una imagen.'); return; }
+  if (!appUrl)       { setStatus('statusUpload', 'error', '⚠ Falta la URL de la app.'); return; }
+  if (!secret)       { setStatus('statusUpload', 'error', '⚠ Falta el Admin Secret.'); return; }
+  if (!month || !year) { setStatus('statusUpload', 'error', '⚠ Falta el mes o el año.'); return; }
 
   setUploadLoading(true);
   setStatus('statusUpload', 'loading', '🚀 Subiendo plan a la app...');
 
-  try {
-    const body = {
-      month:        parsedData.month_num,
-      year:         parsedData.year,
-      visionText:   vision || null,
-      strategyText: estrategia || null,
-      entries:      parsedData.days.map(d => ({
+  const entries = parsedData
+    ? parsedData.days.map(d => ({
         day:      d.day,
         readings: [d.reading_1, d.reading_2, d.reading_3].filter(Boolean),
-      })),
+      }))
+    : [];
+
+  try {
+    const body = {
+      month,
+      year,
+      visionText:   vision || null,
+      strategyText: estrategia || null,
+      entries,
     };
 
     const res = await fetch(`${appUrl}/api/admin/seed-plan`, {
@@ -431,8 +493,10 @@ async function uploadPlan() {
     const json = await res.json();
     if (!res.ok || !json.success) throw new Error(json.error || `Error ${res.status}`);
 
+    const monthNames = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    const daysMsg = entries.length > 0 ? ` ${entries.length} días guardados.` : '';
     setStatus('statusUpload', 'success',
-      `✅ ¡Plan de ${parsedData.month} ${parsedData.year} subido! ${parsedData.days.length} días guardados en la app.`
+      `✅ ¡Plan de ${monthNames[month]} ${year} subido!${daysMsg}`
     );
   } catch (err) {
     setStatus('statusUpload', 'error', '⚠ ' + (err.message || 'Error al subir. Revisa la URL y el Admin Secret.'));

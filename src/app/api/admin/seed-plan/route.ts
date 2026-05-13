@@ -23,8 +23,11 @@ export async function POST(req: NextRequest) {
   const body: Body = await req.json();
   const { month, year, visionText, strategyText, entries } = body;
 
-  if (!month || !year || !Array.isArray(entries) || entries.length === 0) {
-    return NextResponse.json({ error: 'month, year y entries son requeridos' }, { status: 400 });
+  if (!month || !year) {
+    return NextResponse.json({ error: 'month y year son requeridos' }, { status: 400 });
+  }
+  if (!Array.isArray(entries)) {
+    return NextResponse.json({ error: 'entries debe ser un array' }, { status: 400 });
   }
 
   const plan = await prisma.devotionalPlan.upsert({
