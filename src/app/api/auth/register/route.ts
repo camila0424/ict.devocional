@@ -39,6 +39,10 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<{
       select: { id: true },
     });
 
+    await prisma.streak.create({
+      data: { userId: user.id, current: 0, best: 0, lastCompletedAt: null },
+    });
+
     return NextResponse.json({ success: true, data: { id: user.id } }, { status: 201 });
   } catch (error) {
     console.error('[register]', error);
