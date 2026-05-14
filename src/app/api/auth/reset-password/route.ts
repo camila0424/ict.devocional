@@ -4,13 +4,12 @@ import { Resend } from 'resend';
 import { prisma } from '@/lib/prisma';
 import type { ApiResponse } from '@/types/api';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 const schema = z.object({
   email: z.string().email(),
 });
 
 export async function POST(request: Request): Promise<NextResponse<ApiResponse<null>>> {
+  const resend = new Resend(process.env.RESEND_API_KEY);
   const body: unknown = await request.json();
   const parsed = schema.safeParse(body);
 
