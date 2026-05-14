@@ -3,7 +3,11 @@ import { TabBar } from '@/components/navigation/TabBar';
 import { Sidebar } from '@/components/navigation/Sidebar';
 import { RightPanel } from '@/components/shared/RightPanel';
 import { InstallBanner } from '@/components/shared/InstallBanner';
-import { NotificationBanner } from '@/components/shared/NotificationBanner';
+import dynamic from 'next/dynamic';
+const NotificationBanner = dynamic(
+  () => import('@/components/shared/NotificationBanner').then((m) => m.NotificationBanner),
+  { ssr: false },
+);
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
