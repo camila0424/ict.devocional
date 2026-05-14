@@ -44,7 +44,16 @@ export async function sendReminders() {
     webpush
       .sendNotification(
         { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-        JSON.stringify({ title, body, icon: '/icons/icon-192.png', url }),
+        JSON.stringify({
+          title,
+          body,
+          url,
+          urgency: 'high',
+          requireInteraction: true,
+          vibrate: [200, 100, 200],
+          badge: '/icons/icon-192.png',
+          icon: '/icons/icon-192.png',
+        }),
       )
       .catch(async (err) => {
         if (err.statusCode === 410 || err.statusCode === 404) {
