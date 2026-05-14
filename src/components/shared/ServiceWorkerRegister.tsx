@@ -8,7 +8,7 @@ export function ServiceWorkerRegister() {
     if (!('serviceWorker' in navigator)) return;
 
     navigator.serviceWorker
-      .register('/sw-custom.js')
+      .register('/sw-ict.js')
       .then((reg) => {
         console.log('SW registrado:', reg.scope);
         if (Notification.permission === 'granted') {
