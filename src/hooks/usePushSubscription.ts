@@ -2,6 +2,61 @@
 
 import { useState } from 'react';
 
+function urlBase64ToUint8Array(base64String: string) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = atob(base64);
+  return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
+}
+
+export async function subscribePushInBackground(): Promise<boolean> {
+  if (
+    typeof window === 'undefined' ||
+    !('serviceWorker' in navigator) ||
+    !('PushManager' in window)
+  )
+    return false;
+  if (Notification.permission !== 'granted') return false;
+  if (localStorage.getItem('ict-notification-subscribed')) return true;
+
+  try {
+    const registration = (await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 10_000)),
+    ])) as ServiceWorkerRegistration;
+
+    const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+    if (!vapidKey) return false;
+
+    const existing = await registration.pushManager.getSubscription();
+    const subscription =
+      existing ??
+      (await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidKey),
+      }));
+
+    const { endpoint, keys } = subscription.toJSON() as {
+      endpoint: string;
+      keys: { p256dh: string; auth: string };
+    };
+
+    const res = await fetch('/api/push/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ endpoint, keys }),
+    });
+
+    if (res.ok) {
+      localStorage.setItem('ict-notification-subscribed', '1');
+      return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 export function usePushSubscription() {
   const [status, setStatus] = useState<'idle' | 'loading' | 'subscribed' | 'denied' | 'error'>(
     'idle',
@@ -33,17 +88,9 @@ export function usePushSubscription() {
     setErrorMessage(null);
 
     try {
-      // serviceWorker.ready with 10s timeout
-      const registration = await Promise.race([
-        navigator.serviceWorker.ready,
-        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 10_000)),
-      ]).catch((err: Error) => {
-        throw err.message === 'timeout'
-          ? Object.assign(new Error('No se pudo conectar al service worker'), { tag: 'sw-timeout' })
-          : err;
-      });
+      const permission =
+        Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission();
 
-      const permission = await Notification.requestPermission();
       if (permission === 'denied') {
         setErrorMessage('Permiso de notificaciones denegado');
         setStatus('denied');
@@ -54,41 +101,8 @@ export function usePushSubscription() {
         return;
       }
 
-      const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-      if (!vapidKey) {
-        setStatus('error');
-        setErrorMessage('VAPID key no configurada. Contacta al administrador.');
-        return;
-      }
-
-      const existing = await (
-        registration as ServiceWorkerRegistration
-      ).pushManager.getSubscription();
-      const subscription =
-        existing ??
-        (await (registration as ServiceWorkerRegistration).pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(vapidKey),
-        }));
-
-      const { endpoint, keys } = subscription.toJSON() as {
-        endpoint: string;
-        keys: { p256dh: string; auth: string };
-      };
-
-      let res: Response;
-      try {
-        res = await fetch('/api/push/subscribe', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ endpoint, keys }),
-        });
-      } catch {
-        setError('Error de red al guardar la suscripción');
-        return;
-      }
-
-      if (res.ok) {
+      const success = await subscribePushInBackground();
+      if (success) {
         setStatus('subscribed');
       } else {
         setError('No se pudo guardar la suscripción en el servidor');
@@ -113,6 +127,7 @@ export function usePushSubscription() {
         });
         await subscription.unsubscribe();
       }
+      localStorage.removeItem('ict-notification-subscribed');
       setStatus('idle');
     } catch {
       setError('No se pudo desactivar la suscripción');
@@ -120,11 +135,4 @@ export function usePushSubscription() {
   }
 
   return { status, errorMessage, subscribe, unsubscribe };
-}
-
-function urlBase64ToUint8Array(base64String: string) {
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-  const rawData = atob(base64);
-  return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
 }

@@ -3,6 +3,7 @@ import { TabBar } from '@/components/navigation/TabBar';
 import { Sidebar } from '@/components/navigation/Sidebar';
 import { RightPanel } from '@/components/shared/RightPanel';
 import { InstallBanner } from '@/components/shared/InstallBanner';
+import { NotificationBanner } from '@/components/shared/NotificationBanner';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -12,6 +13,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="bg-background flex min-h-dvh md:bg-[#F8FAFF]">
       <InstallBanner />
+      <NotificationBanner />
       <Sidebar userName={userName} userInitial={userInitial} />
       <div className="flex flex-1 justify-center">
         <div className="bg-background flex min-h-dvh w-full flex-col overflow-x-hidden pb-20 md:max-w-170 md:pb-0 md:shadow-[0_0_48px_rgba(0,0,0,0.07)]">
