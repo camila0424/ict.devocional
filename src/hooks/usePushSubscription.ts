@@ -54,6 +54,13 @@ export function usePushSubscription() {
         return;
       }
 
+      const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      if (!vapidKey) {
+        setStatus('error');
+        setErrorMessage('VAPID key no configurada. Contacta al administrador.');
+        return;
+      }
+
       const existing = await (
         registration as ServiceWorkerRegistration
       ).pushManager.getSubscription();
@@ -61,7 +68,7 @@ export function usePushSubscription() {
         existing ??
         (await (registration as ServiceWorkerRegistration).pushManager.subscribe({
           userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!),
+          applicationServerKey: urlBase64ToUint8Array(vapidKey),
         }));
 
       const { endpoint, keys } = subscription.toJSON() as {
