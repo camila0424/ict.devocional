@@ -25,10 +25,22 @@ export function NotificationBanner() {
 
   useEffect(() => {
     if (status !== 'authenticated') return;
-    // Usar setTimeout para evitar setState síncrono en el efecto
-    const id = setTimeout(() => setVisible(shouldShow()), 2000);
+    const id = setTimeout(() => {
+      if (
+        typeof window !== 'undefined' &&
+        'Notification' in window &&
+        Notification.permission === 'granted' &&
+        !localStorage.getItem('ict-notification-subscribed')
+      ) {
+        subscribe().then(() => {
+          localStorage.setItem('ict-notification-subscribed', 'true');
+        });
+        return;
+      }
+      setVisible(shouldShow());
+    }, 2000);
     return () => clearTimeout(id);
-  }, [status]);
+  }, [status, subscribe]);
 
   function handleDismiss() {
     localStorage.setItem('ict-notification-dismissed', Date.now().toString());
