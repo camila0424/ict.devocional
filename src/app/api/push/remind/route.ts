@@ -9,11 +9,6 @@ function vapidConfigured() {
   );
 }
 
-function parseTurno(value: string | null): 'mañana' | 'tarde' | 'noche' | null {
-  if (value === 'mañana' || value === 'tarde' || value === 'noche') return value;
-  return null;
-}
-
 // Called by Vercel cron jobs — GET with Authorization: Bearer CRON_SECRET
 export async function GET(req: NextRequest) {
   if (!vapidConfigured()) {
@@ -27,12 +22,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const turno = parseTurno(req.nextUrl.searchParams.get('turno'));
-  if (!turno) {
-    return NextResponse.json({ error: 'Invalid or missing turno' }, { status: 400 });
-  }
-
-  const result = await sendReminders(turno);
+  const result = await sendReminders();
   return NextResponse.json(result);
 }
 
@@ -49,12 +39,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const body = await req.json();
-  const turno = parseTurno(body?.turno);
-  if (!turno) {
-    return NextResponse.json({ error: 'Invalid turno' }, { status: 400 });
-  }
-
-  const result = await sendReminders(turno);
+  const result = await sendReminders();
   return NextResponse.json(result);
 }

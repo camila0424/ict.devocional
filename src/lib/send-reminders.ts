@@ -1,21 +1,35 @@
 import webpush from 'web-push';
 import { prisma } from '@/lib/prisma';
-import { getRecordatorio, FRASES_MOTIVACIONALES } from '@/constants/phrases';
+import { getRecordatorio, getFraseDelDia } from '@/constants/phrases';
 
-export async function sendReminders(turno: 'mañana' | 'tarde' | 'noche') {
+export async function sendReminders() {
   webpush.setVapidDetails(
     process.env.VAPID_SUBJECT!,
     process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
     process.env.VAPID_PRIVATE_KEY!,
   );
 
-  const today = new Date();
-  today.setUTCHours(0, 0, 0, 0);
+  const nowSpain = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Madrid' }));
+  const todaySpain = new Date(nowSpain.getFullYear(), nowSpain.getMonth(), nowSpain.getDate());
+
+  const hourSpain = nowSpain.getHours();
+  const turno: 'mañana' | 'tarde' | 'noche' =
+    hourSpain < 12 ? 'mañana' : hourSpain < 17 ? 'tarde' : 'noche';
+
+  const todayEntry = await prisma.dailyEntry.findFirst({
+    where: { date: todaySpain },
+    select: { dayNumber: true },
+  });
+  const devotionalUrl = todayEntry ? `/devotional/${todayEntry.dayNumber}` : '/';
 
   const subscriptions = await prisma.pushSubscription.findMany({ include: { user: true } });
 
   const completedToday = await prisma.userProgress.findMany({
-    where: { date: today, completed: true, userId: { in: subscriptions.map((s) => s.userId) } },
+    where: {
+      date: todaySpain,
+      completed: true,
+      userId: { in: subscriptions.map((s) => s.userId) },
+    },
     select: { userId: true },
   });
 
@@ -24,23 +38,24 @@ export async function sendReminders(turno: 'mañana' | 'tarde' | 'noche') {
   const completed = subscriptions.filter((s) => completedSet.has(s.userId));
 
   const recordatorio = getRecordatorio(turno);
-  const motivacional =
-    FRASES_MOTIVACIONALES[Math.floor(Math.random() * FRASES_MOTIVACIONALES.length)]!;
+  const fraseDelDia = getFraseDelDia(nowSpain);
 
-  const send = (sub: (typeof subscriptions)[0], body: string) =>
+  const send = (sub: (typeof subscriptions)[0], title: string, body: string, url: string) =>
     webpush
       .sendNotification(
         { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-        JSON.stringify({ title: 'ICT Devocional 🙏', body, icon: '/icons/icon-192.png' }),
+        JSON.stringify({ title, body, icon: '/icons/icon-192.png', url }),
       )
       .catch(async (err) => {
-        if (err.statusCode === 410) await prisma.pushSubscription.delete({ where: { id: sub.id } });
+        if (err.statusCode === 410 || err.statusCode === 404) {
+          await prisma.pushSubscription.delete({ where: { id: sub.id } });
+        }
         throw err;
       });
 
   const results = await Promise.allSettled([
-    ...pending.map((s) => send(s, recordatorio)),
-    ...completed.map((s) => send(s, motivacional)),
+    ...pending.map((s) => send(s, 'ICT Devocional 🙏', recordatorio, devotionalUrl)),
+    ...completed.map((s) => send(s, 'ICT Devocional ✨', fraseDelDia, '/')),
   ]);
 
   return {
