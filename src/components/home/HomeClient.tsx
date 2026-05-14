@@ -27,10 +27,10 @@ const MAY_2026_OFFSET = 4;
 
 function parsePlanText(text: string | null | undefined): { label: string; passage: string } | null {
   if (!text) return null;
-  const newlineIdx = text.indexOf('\n');
-  if (newlineIdx === -1) return { label: '', passage: text.trim() };
-  const label = text.slice(0, newlineIdx).replace(/:$/, '').trim();
-  const passage = text.slice(newlineIdx + 1).trim();
+  const sepIdx = text.indexOf('||');
+  if (sepIdx === -1) return { label: '', passage: text.trim() };
+  const label = text.slice(0, sepIdx).trim();
+  const passage = text.slice(sepIdx + 2).trim();
   return { label, passage };
 }
 
@@ -160,8 +160,7 @@ export function HomeClient({
             <div className="mb-2 flex items-center gap-2">
               <span className="text-base">🌎</span>
               <h2 className="font-bold text-blue-900 dark:text-blue-200">
-                Visión
-                {vision?.label ? <span className="ml-1 font-extrabold">{vision.label}</span> : null}
+                Visión{vision?.label ? ` ${vision.label}` : ''}
               </h2>
             </div>
             <p className="text-foreground/80 text-sm leading-relaxed">
@@ -184,10 +183,7 @@ export function HomeClient({
             <div className="mb-2 flex items-center gap-2">
               <span className="text-base">🧭</span>
               <h2 className="font-bold text-amber-900 dark:text-amber-200">
-                Estrategia del mes
-                {strategy?.label ? (
-                  <span className="ml-1 font-extrabold">{strategy.label}</span>
-                ) : null}
+                Estrategia del mes{strategy?.label ? `: ${strategy.label}` : ''}
               </h2>
             </div>
             <p className="text-foreground/80 text-sm leading-relaxed">

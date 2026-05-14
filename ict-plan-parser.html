@@ -21,6 +21,7 @@
     --green: #22C55E;
     --green-bg: #052e16;
     --amber: #F59E0B;
+    --amber-bg: #1c1200;
     --red: #f87171;
     --red-bg: #2d0f0f;
   }
@@ -116,6 +117,36 @@
   .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   @media (max-width: 500px) { .row { grid-template-columns: 1fr; } }
 
+  /* Preview card estilo dashboard */
+  .preview-card {
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    font-size: 13px;
+    line-height: 1.7;
+    border: 1px solid var(--border);
+    background: var(--dark);
+  }
+  .preview-card .card-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .preview-card .card-title {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .preview-card .card-content {
+    color: var(--muted);
+    font-size: 13px;
+  }
+
   .drop-zone {
     border: 1.5px dashed var(--border);
     border-radius: 12px;
@@ -205,6 +236,14 @@
     margin-bottom: 1rem;
   }
 
+  .helper-text {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: -8px;
+    margin-bottom: 12px;
+    line-height: 1.5;
+  }
+
   #resultSection { display: none; }
 </style>
 </head>
@@ -245,7 +284,7 @@
           <option value="2">Febrero</option>
           <option value="3">Marzo</option>
           <option value="4">Abril</option>
-          <option value="5">Mayo</option>
+          <option value="5" selected>Mayo</option>
           <option value="6">Junio</option>
           <option value="7">Julio</option>
           <option value="8">Agosto</option>
@@ -264,11 +303,28 @@
 
   <!-- Visión del mes -->
   <div class="section">
-    <p class="section-title">👁 Visión del mes</p>
-    <label>Pasaje bíblico de la visión — el nombre de la cita en negrilla, el texto en regular</label>
-    <textarea id="visionTexto" placeholder="Ej: Juan 3:16 — Porque de tal manera amó Dios al mundo, que ha dado a su Hijo unigénito..."></textarea>
-    <label>Estrategia del mes</label>
-    <textarea id="estrategiaTexto" placeholder="Ej: Romanos 8:28 — Y sabemos que a los que aman a Dios, todas las cosas les ayudan a bien..."></textarea>
+    <p class="section-title">🌍 Visión del mes</p>
+
+    <label>Título de la visión</label>
+    <input type="text" id="visionTitulo" placeholder="Ej: Mundial, Local, Familiar...">
+    <p class="helper-text">Se mostrará en el dashboard como: <strong style="color:var(--text)">Visión [Título]</strong></p>
+
+    <label>Contenido — versículo o texto</label>
+    <textarea id="visionContenido" placeholder="Ej: Habacuc 2:14 — Porque la tierra será llena del conocimiento de la gloria de Jehová, como las aguas cubren el mar."></textarea>
+    <p class="helper-text">Aparecerá debajo del título en el dashboard.</p>
+  </div>
+
+  <!-- Estrategia del mes -->
+  <div class="section">
+    <p class="section-title">🎯 Estrategia del mes</p>
+
+    <label>Título de la estrategia</label>
+    <input type="text" id="estrategiaTitulo" placeholder="Ej: Misiones, Evangelismo, Oración...">
+    <p class="helper-text">Se mostrará en el dashboard como: <strong style="color:var(--text)">Estrategia del mes: [Título]</strong></p>
+
+    <label>Contenido — versículo o texto</label>
+    <textarea id="estrategiaContenido" placeholder="Ej: Hechos 16:9-10 — Y se le mostró a Pablo una visión de noche: un varón macedonio estaba en pie, rogándole..."></textarea>
+    <p class="helper-text">Aparecerá debajo del título en el dashboard.</p>
   </div>
 
   <!-- Imagen del plan -->
@@ -296,19 +352,24 @@
       <span class="plan-badge" id="planBadge">31 días</span>
     </div>
 
-    <div id="visionPreview" style="display:none;background:var(--dark);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;font-size:13px;line-height:1.7;">
-      <strong style="color:var(--amber);font-size:11px;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px;">👁 Visión del mes</strong>
-      <span id="visionPreviewText"></span>
+    <!-- Preview visión -->
+    <div id="visionPreview" style="display:none;" class="preview-card">
+      <div class="card-label" style="color:var(--amber)">🌍 Visión</div>
+      <div class="card-title" id="visionTituloPreview"></div>
+      <div class="card-content" id="visionContenidoPreview"></div>
     </div>
-    <div id="estrategiaPreview" style="display:none;background:var(--dark);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:1rem;font-size:13px;line-height:1.7;">
-      <strong style="color:var(--blue-mid);font-size:11px;text-transform:uppercase;letter-spacing:.06em;display:block;margin-bottom:6px;">📌 Estrategia del mes</strong>
-      <span id="estrategiaPreviewText"></span>
+
+    <!-- Preview estrategia -->
+    <div id="estrategiaPreview" style="display:none;" class="preview-card">
+      <div class="card-label" style="color:var(--blue-mid)">🎯 Estrategia del mes</div>
+      <div class="card-title" id="estrategiaTituloPreview"></div>
+      <div class="card-content" id="estrategiaContenidoPreview"></div>
     </div>
 
     <div class="preview-grid" id="daysGrid"></div>
   </div>
 
-  <!-- Subir a la app (siempre visible) -->
+  <!-- Subir a la app -->
   <div class="section">
     <p class="section-title">🚀 Subir a la app</p>
     <button class="btn btn-green" id="uploadBtn">
@@ -330,7 +391,41 @@ window.addEventListener('DOMContentLoaded', () => {
   const y = new Date().getFullYear();
   document.getElementById('yearInput').value = y;
   document.getElementById('monthSelect').value = new Date().getMonth() + 1;
+
+  // Preview en tiempo real al escribir
+  ['visionTitulo', 'visionContenido', 'estrategiaTitulo', 'estrategiaContenido'].forEach(id => {
+    document.getElementById(id).addEventListener('input', updatePreviews);
+  });
 });
+
+function updatePreviews() {
+  const vTitulo    = document.getElementById('visionTitulo').value.trim();
+  const vContenido = document.getElementById('visionContenido').value.trim();
+  const eTitulo    = document.getElementById('estrategiaTitulo').value.trim();
+  const eContenido = document.getElementById('estrategiaContenido').value.trim();
+
+  const visionPreview = document.getElementById('visionPreview');
+  if (vTitulo || vContenido) {
+    document.getElementById('visionTituloPreview').textContent = 'Visión ' + (vTitulo || '...');
+    document.getElementById('visionContenidoPreview').textContent = vContenido || '';
+    visionPreview.style.display = 'block';
+  } else {
+    visionPreview.style.display = 'none';
+  }
+
+  const estrategiaPreview = document.getElementById('estrategiaPreview');
+  if (eTitulo || eContenido) {
+    document.getElementById('estrategiaTituloPreview').textContent = 'Estrategia del mes: ' + (eTitulo || '...');
+    document.getElementById('estrategiaContenidoPreview').textContent = eContenido || '';
+    estrategiaPreview.style.display = 'block';
+  } else {
+    estrategiaPreview.style.display = 'none';
+  }
+
+  if (vTitulo || vContenido || eTitulo || eContenido) {
+    document.getElementById('resultSection').style.display = 'block';
+  }
+}
 
 // ── Drag & Drop ──────────────────────────────────────────
 const dropZone = document.getElementById('dropZone');
@@ -353,7 +448,6 @@ function loadImage(file) {
     document.getElementById('preview').src = ev.target.result;
     document.getElementById('preview').style.display = 'block';
     document.getElementById('parseBtn').disabled = false;
-    document.getElementById('resultSection').style.display = 'none';
     setStatus('statusAnalisis', '', '');
   };
   reader.readAsDataURL(file);
@@ -388,8 +482,9 @@ async function analyzeImage() {
     parsedData = data;
     document.getElementById('monthSelect').value = data.month_num;
     document.getElementById('yearInput').value = data.year;
-    showPreview(parsedData);
-    setStatus('statusAnalisis', '', '');
+    showDaysPreview(parsedData.days);
+    updatePreviews();
+    setStatus('statusAnalisis', 'success', `✅ ${parsedData.days.length} días detectados correctamente.`);
   } catch (err) {
     setStatus('statusAnalisis', 'error', '⚠ ' + (err.message || 'Error al analizar. Intenta con una imagen más nítida.'));
     parsedData = null;
@@ -398,39 +493,8 @@ async function analyzeImage() {
   }
 }
 
-function formatBiblePassage(text) {
-  // Formatea "Cita bíblica — texto" con la cita en negrilla y el texto en regular
-  // Acepta separadores: —, -, :, "
-  const match = text.match(/^([^—\-"]+[:\d]*)\s*[—\-"]\s*(.+)$/s);
-  if (match) {
-    return `<strong style="color:var(--text)">${match[1].trim()}</strong> — ${match[2].trim()}`;
-  }
-  return text;
-}
-
-function showPreview(data) {
-  const { month, year, days } = data;
-  document.getElementById('planBadge').textContent = `✓ ${days.length} días · ${month} ${year}`;
-
-  const vision = document.getElementById('visionTexto').value.trim();
-  const estrategia = document.getElementById('estrategiaTexto').value.trim();
-
-  const visionPreview = document.getElementById('visionPreview');
-  if (vision) {
-    document.getElementById('visionPreviewText').innerHTML = formatBiblePassage(vision);
-    visionPreview.style.display = 'block';
-  } else {
-    visionPreview.style.display = 'none';
-  }
-
-  const estrategiaPreview = document.getElementById('estrategiaPreview');
-  if (estrategia) {
-    document.getElementById('estrategiaPreviewText').innerHTML = formatBiblePassage(estrategia);
-    estrategiaPreview.style.display = 'block';
-  } else {
-    estrategiaPreview.style.display = 'none';
-  }
-
+function showDaysPreview(days) {
+  document.getElementById('planBadge').textContent = `✓ ${days.length} días`;
   const grid = document.getElementById('daysGrid');
   grid.innerHTML = days.slice(0, 6).map(d => `
     <div class="day-card">
@@ -442,25 +506,30 @@ function showPreview(data) {
       +${days.length - 6} días más...
     </div>
   ` : '');
-
   document.getElementById('resultSection').style.display = 'block';
-  document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth' });
 }
 
 // ── Subir a Vercel ───────────────────────────────────────
 document.getElementById('uploadBtn').addEventListener('click', uploadPlan);
 
 async function uploadPlan() {
-  const appUrl = document.getElementById('appUrl').value.trim().replace(/\/$/, '');
-  const secret = document.getElementById('adminSecret').value.trim();
-  const vision = document.getElementById('visionTexto').value.trim();
-  const estrategia = document.getElementById('estrategiaTexto').value.trim();
-  const month = parseInt(document.getElementById('monthSelect').value, 10);
-  const year = parseInt(document.getElementById('yearInput').value, 10);
+  const appUrl     = document.getElementById('appUrl').value.trim().replace(/\/$/, '');
+  const secret     = document.getElementById('adminSecret').value.trim();
+  const vTitulo    = document.getElementById('visionTitulo').value.trim();
+  const vContenido = document.getElementById('visionContenido').value.trim();
+  const eTitulo    = document.getElementById('estrategiaTitulo').value.trim();
+  const eContenido = document.getElementById('estrategiaContenido').value.trim();
+  const month      = parseInt(document.getElementById('monthSelect').value, 10);
+  const year       = parseInt(document.getElementById('yearInput').value, 10);
 
   if (!appUrl)       { setStatus('statusUpload', 'error', '⚠ Falta la URL de la app.'); return; }
   if (!secret)       { setStatus('statusUpload', 'error', '⚠ Falta el Admin Secret.'); return; }
   if (!month || !year) { setStatus('statusUpload', 'error', '⚠ Falta el mes o el año.'); return; }
+
+  // Construir visionText y strategyText combinando título + contenido
+  // Formato: "TITULO||CONTENIDO" — el dashboard lo separa
+  const visionText   = (vTitulo || vContenido)   ? `${vTitulo}||${vContenido}`   : null;
+  const strategyText = (eTitulo || eContenido)    ? `${eTitulo}||${eContenido}`   : null;
 
   setUploadLoading(true);
   setStatus('statusUpload', 'loading', '🚀 Subiendo plan a la app...');
@@ -473,13 +542,7 @@ async function uploadPlan() {
     : [];
 
   try {
-    const body = {
-      month,
-      year,
-      visionText:   vision || null,
-      strategyText: estrategia || null,
-      entries,
-    };
+    const body = { month, year, visionText, strategyText, entries };
 
     const res = await fetch(`${appUrl}/api/admin/seed-plan`, {
       method: 'POST',
@@ -496,7 +559,7 @@ async function uploadPlan() {
     const monthNames = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
     const daysMsg = entries.length > 0 ? ` ${entries.length} días guardados.` : '';
     setStatus('statusUpload', 'success',
-      `✅ ¡Plan de ${monthNames[month]} ${year} subido!${daysMsg}`
+      `✅ ¡Plan de ${monthNames[month]} ${year} subido!${daysMsg} Visión y estrategia actualizadas.`
     );
   } catch (err) {
     setStatus('statusUpload', 'error', '⚠ ' + (err.message || 'Error al subir. Revisa la URL y el Admin Secret.'));
