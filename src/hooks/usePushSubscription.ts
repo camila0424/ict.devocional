@@ -4,38 +4,62 @@ import { useState } from 'react';
 
 export function usePushSubscription() {
   const [status, setStatus] = useState<'idle' | 'loading' | 'subscribed' | 'denied' | 'error'>(
-    () => {
-      if (
-        typeof window === 'undefined' ||
-        !('Notification' in window) ||
-        !('serviceWorker' in navigator)
-      ) {
-        return 'idle';
-      }
-      return Notification.permission === 'denied' ? 'denied' : 'idle';
-    },
+    'idle',
   );
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  function setError(msg: string) {
+    setErrorMessage(msg);
+    setStatus('error');
+  }
 
   async function subscribe() {
-    if (!('Notification' in window) || !('serviceWorker' in navigator)) {
-      setStatus('error');
+    if (
+      typeof window === 'undefined' ||
+      !('serviceWorker' in navigator) ||
+      !('PushManager' in window)
+    ) {
+      setError('Tu navegador no soporta notificaciones');
       return;
     }
 
-    setStatus('loading');
-
-    const permission = await Notification.requestPermission();
-    if (permission !== 'granted') {
+    if (Notification.permission === 'denied') {
+      setErrorMessage(null);
       setStatus('denied');
       return;
     }
 
+    setStatus('loading');
+    setErrorMessage(null);
+
     try {
-      const registration = await navigator.serviceWorker.ready;
-      const existing = await registration.pushManager.getSubscription();
+      // serviceWorker.ready with 10s timeout
+      const registration = await Promise.race([
+        navigator.serviceWorker.ready,
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 10_000)),
+      ]).catch((err: Error) => {
+        throw err.message === 'timeout'
+          ? Object.assign(new Error('No se pudo conectar al service worker'), { tag: 'sw-timeout' })
+          : err;
+      });
+
+      const permission = await Notification.requestPermission();
+      if (permission === 'denied') {
+        setErrorMessage('Permiso de notificaciones denegado');
+        setStatus('denied');
+        return;
+      }
+      if (permission === 'default') {
+        setStatus('idle');
+        return;
+      }
+
+      const existing = await (
+        registration as ServiceWorkerRegistration
+      ).pushManager.getSubscription();
       const subscription =
         existing ??
-        (await registration.pushManager.subscribe({
+        (await (registration as ServiceWorkerRegistration).pushManager.subscribe({
           userVisibleOnly: true,
           applicationServerKey: urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!),
         }));
@@ -45,21 +69,33 @@ export function usePushSubscription() {
         keys: { p256dh: string; auth: string };
       };
 
-      const res = await fetch('/api/push/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ endpoint, keys }),
-      });
+      let res: Response;
+      try {
+        res = await fetch('/api/push/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ endpoint, keys }),
+        });
+      } catch {
+        setError('Error de red al guardar la suscripción');
+        return;
+      }
 
-      setStatus(res.ok ? 'subscribed' : 'error');
-    } catch {
-      setStatus('error');
+      if (res.ok) {
+        setStatus('subscribed');
+      } else {
+        setError('No se pudo guardar la suscripción en el servidor');
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Error desconocido';
+      setError(msg);
     }
   }
 
   async function unsubscribe() {
     try {
       setStatus('loading');
+      setErrorMessage(null);
       const registration = await navigator.serviceWorker.ready;
       const subscription = await registration.pushManager.getSubscription();
       if (subscription) {
@@ -72,11 +108,11 @@ export function usePushSubscription() {
       }
       setStatus('idle');
     } catch {
-      setStatus('error');
+      setError('No se pudo desactivar la suscripción');
     }
   }
 
-  return { status, subscribe, unsubscribe };
+  return { status, errorMessage, subscribe, unsubscribe };
 }
 
 function urlBase64ToUint8Array(base64String: string) {
