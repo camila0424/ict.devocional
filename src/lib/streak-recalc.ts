@@ -1,4 +1,4 @@
-import { differenceInCalendarDays, startOfDay } from 'date-fns';
+import { differenceInCalendarDays, startOfDay, subDays } from 'date-fns';
 import { prisma } from '@/lib/prisma';
 
 export type StreakResult = {
@@ -23,29 +23,32 @@ export async function recalculateStreak(userId: string): Promise<StreakResult> {
     return { current: 0, best: 0, lastCompletedAt: null };
   }
 
-  const days = completedRows.map((r) => startOfDay(new Date(r.date as Date)));
+  // @db.Date comes back as UTC midnight — extract UTC date components so that
+  // timezone offsets don't shift the calendar day.
+  const days = completedRows.map((r) => {
+    const d = new Date(r.date as Date);
+    return startOfDay(new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  });
+
   const lastCompletedAt: Date = days[days.length - 1]!;
 
   // Current streak: walk backwards from today.
-  // diff===1 on the first step is the "today not yet completed" grace window.
-  // After that, only exact matches (diff===0) are consecutive.
+  // A gap of 2+ calendar days breaks the streak.
   const today = startOfDay(new Date());
   let current = 0;
   let cursor = today;
-  let firstStep = true;
 
   for (let i = days.length - 1; i >= 0; i--) {
     const diff = differenceInCalendarDays(cursor, days[i]!);
-    if (diff === 0 || (diff === 1 && firstStep)) {
+    if (diff <= 1) {
       current++;
-      cursor = new Date(days[i]!.getTime() - 86400000);
-      firstStep = false;
+      cursor = subDays(days[i]!, 1);
     } else {
       break;
     }
   }
 
-  // Best streak: iterate all days in order, track longest consecutive run.
+  // Best streak: longest consecutive run across all completed days.
   let best = 0;
   let run = 1;
   for (let i = 1; i < days.length; i++) {

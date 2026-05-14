@@ -3,6 +3,7 @@ import { LogOut, User } from 'lucide-react';
 import { auth, signOut } from '@/lib/auth';
 import { ReminderPicker } from '@/components/profile/ReminderPicker';
 import { PushSubscribeButton } from '@/components/profile/PushSubscribeButton';
+import { DeleteAccountButton } from '@/components/profile/DeleteAccountButton';
 
 export default async function ProfilePage() {
   const session = await auth();
@@ -53,6 +54,8 @@ export default async function ProfilePage() {
           Cerrar sesión
         </button>
       </form>
+
+      <DeleteAccountButton />
     </div>
   );
 }
