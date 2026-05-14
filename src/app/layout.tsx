@@ -3,6 +3,7 @@ import { ThemeProvider } from 'next-themes';
 import { Toaster } from 'sonner';
 import { Inter } from 'next/font/google';
 import { Providers } from '@/components/shared/Providers';
+import { ServiceWorkerRegister } from '@/components/shared/ServiceWorkerRegister';
 import { Strings } from '@/constants/strings';
 import './globals.css';
 
@@ -69,6 +70,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Providers>{children}</Providers>
           <Toaster position="top-center" richColors />
         </ThemeProvider>
+        <ServiceWorkerRegister />
       </body>
     </html>
   );

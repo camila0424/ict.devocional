@@ -9,8 +9,8 @@ const withPWA = withPWAInit({
   disable: process.env.NODE_ENV === 'development',
   workboxOptions: {
     disableDevLogs: true,
-    skipWaiting: true, // ← aquí
-    clientsClaim: true, // ← aquí
+    skipWaiting: true,
+    clientsClaim: true,
   },
 });
 
