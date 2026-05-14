@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -206,7 +206,7 @@ function ConfirmResetForm({ token }: { token: string }) {
   );
 }
 
-export default function ResetPasswordPage() {
+function ResetPasswordContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
 
@@ -253,5 +253,13 @@ export default function ResetPasswordPage() {
         {token ? <ConfirmResetForm token={token} /> : <RequestResetForm />}
       </motion.div>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<div>Cargando...</div>}>
+      <ResetPasswordContent />
+    </Suspense>
   );
 }

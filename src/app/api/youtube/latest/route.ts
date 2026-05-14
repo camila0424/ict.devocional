@@ -1,4 +1,4 @@
-export const revalidate = 300;
+export const dynamic = 'force-dynamic';
 
 const MONTHS_ES = [
   'Enero',
