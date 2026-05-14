@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { computeStreakOnComplete } from '@/lib/streak-engine';
+import { recalculateStreak } from '@/lib/streak-recalc';
 import type { ApiResponse } from '@/types/api';
 
 const completeSchema = z.object({
@@ -67,30 +67,8 @@ export async function POST(
     create: { userId, date: dateOnly, completed: true },
   });
 
-  // Actualizar racha
-  const current = await prisma.streak.findUnique({ where: { userId } });
-  const streakState = {
-    current: current?.current ?? 0,
-    best: current?.best ?? 0,
-    lastCompletedAt: current?.lastCompletedAt ?? null,
-  };
-
-  const newStreak = computeStreakOnComplete(streakState, now);
-
-  await prisma.streak.upsert({
-    where: { userId },
-    update: {
-      current: newStreak.current,
-      best: newStreak.best,
-      lastCompletedAt: newStreak.lastCompletedAt,
-    },
-    create: {
-      userId,
-      current: newStreak.current,
-      best: newStreak.best,
-      lastCompletedAt: newStreak.lastCompletedAt,
-    },
-  });
+  // Actualizar racha recalculando desde user_progress
+  const newStreak = await recalculateStreak(userId);
 
   return NextResponse.json({ success: true, data: { streak: newStreak.current } });
 }
