@@ -9,21 +9,34 @@ datasource db {
 }
 
 model User {
-  id           String               @id @default(cuid())
-  email        String               @unique
-  name         String
-  passwordHash String               @map("password_hash")
-  avatarUrl    String?              @map("avatar_url")
-  timezone     String               @default("Europe/Madrid")
-  createdAt    DateTime             @default(now()) @map("created_at")
-  updatedAt    DateTime             @updatedAt @map("updated_at")
-  responses    DevotionalResponse[]
-  pushSubs     PushSubscription[]
-  reminder     Reminder?
-  streak       Streak?
-  progress     UserProgress[]
+  id                  String               @id @default(cuid())
+  email               String               @unique
+  name                String
+  passwordHash        String               @map("password_hash")
+  avatarUrl           String?              @map("avatar_url")
+  timezone            String               @default("Europe/Madrid")
+  createdAt           DateTime             @default(now()) @map("created_at")
+  updatedAt           DateTime             @updatedAt @map("updated_at")
+  responses           DevotionalResponse[]
+  pushSubs            PushSubscription[]
+  reminder            Reminder?
+  streak              Streak?
+  progress            UserProgress[]
+  passwordResetTokens PasswordResetToken[]
 
   @@map("users")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
 }
 
 model DevotionalPlan {
