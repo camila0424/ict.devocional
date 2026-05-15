@@ -18,7 +18,7 @@ export async function DELETE() {
   await prisma.userProgress.deleteMany({ where: { userId } });
   await prisma.devotionalResponse.deleteMany({ where: { userId } });
   await prisma.passwordResetToken.deleteMany({ where: { userId } });
-  await prisma.user.delete({ where: { id: userId } });
+  await prisma.user.deleteMany({ where: { id: userId } });
 
   return NextResponse.json({ success: true });
 }
