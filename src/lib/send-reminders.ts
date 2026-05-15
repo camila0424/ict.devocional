@@ -22,7 +22,17 @@ export async function sendReminders() {
   });
   const devotionalUrl = todayEntry ? `/devotional/${todayEntry.dayNumber}` : '/';
 
-  const subscriptions = await prisma.pushSubscription.findMany({ include: { user: true } });
+  const subscriptions = await prisma.pushSubscription.findMany({
+    where: {
+      user: {
+        reminder: {
+          enabled: true,
+          hour: hourSpain,
+        },
+      },
+    },
+    include: { user: true },
+  });
 
   const completedToday = await prisma.userProgress.findMany({
     where: {
@@ -48,12 +58,12 @@ export async function sendReminders() {
           title,
           body,
           url,
-          urgency: 'high',
           requireInteraction: true,
           vibrate: [200, 100, 200],
           badge: '/icons/icon-192.png',
           icon: '/icons/icon-192.png',
         }),
+        { urgency: 'high' },
       )
       .catch(async (err) => {
         if (err.statusCode === 410 || err.statusCode === 404) {
