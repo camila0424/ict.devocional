@@ -27,8 +27,11 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const { enabled, time } = await req.json();
-  const [hour, minute] = (time as string).split(':').map(Number);
+  const body = await req.json();
+  const hour: number = body.hour ?? (body.time ? Number((body.time as string).split(':')[0]) : 7);
+  const minute: number =
+    body.minute ?? (body.time ? Number((body.time as string).split(':')[1]) : 0);
+  const enabled: boolean = body.enabled ?? true;
 
   await prisma.reminder.upsert({
     where: { userId: session.user.id },
