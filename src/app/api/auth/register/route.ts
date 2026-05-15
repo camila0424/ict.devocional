@@ -11,6 +11,7 @@ const registerSchema = z.object({
 });
 
 export async function POST(request: Request): Promise<NextResponse<ApiResponse<{ id: string }>>> {
+  console.log('DB URL:', process.env.DATABASE_URL?.slice(0, 50));
   const body: unknown = await request.json();
   const parsed = registerSchema.safeParse(body);
 
