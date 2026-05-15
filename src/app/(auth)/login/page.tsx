@@ -131,15 +131,6 @@ export default function LoginPage() {
           )}
         </div>
 
-        <div className="flex justify-end">
-          <Link
-            href="/reset-password"
-            className="text-muted hover:text-primary text-xs hover:underline"
-          >
-            ¿Olvidaste tu contraseña?
-          </Link>
-        </div>
-
         <motion.button
           whileTap={{ scale: 0.97 }}
           type="submit"
@@ -162,6 +153,15 @@ export default function LoginPage() {
           className="font-semibold text-[var(--color-primary)] hover:underline"
         >
           Crear cuenta
+        </Link>
+      </p>
+      <p className="text-muted mt-2 text-center text-sm">
+        ¿Olvidaste tu contraseña?{' '}
+        <Link
+          href="/reset-password"
+          className="font-semibold text-[var(--color-primary)] hover:underline"
+        >
+          Recuperar contraseña
         </Link>
       </p>
     </motion.div>
