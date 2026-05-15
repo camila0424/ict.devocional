@@ -23,14 +23,6 @@ export async function sendReminders() {
   const devotionalUrl = todayEntry ? `/devotional/${todayEntry.dayNumber}` : '/';
 
   const subscriptions = await prisma.pushSubscription.findMany({
-    where: {
-      user: {
-        reminder: {
-          enabled: true,
-          hour: hourSpain,
-        },
-      },
-    },
     include: { user: true },
   });
 
