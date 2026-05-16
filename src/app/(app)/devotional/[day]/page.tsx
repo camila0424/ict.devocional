@@ -32,36 +32,35 @@ export default async function DevotionalDayPage({ params }: { params: Promise<{ 
   if (isNaN(dayNumber) || dayNumber < 1 || dayNumber > 31) notFound();
 
   const nowSpain = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Madrid' }));
-  const today = nowSpain.getDate();
-
-  if (dayNumber > today) {
-    const entry = await getEntry(session.user.id, dayNumber);
-    const entryDate = entry ? new Date(entry.date) : null;
-    const dateStr = entryDate
-      ? entryDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })
-      : `el día ${dayNumber}`;
-
-    return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-6 p-6 text-center">
-        <span className="text-5xl">🔒</span>
-        <div>
-          <h1 className="text-xl font-bold">Este devocional aún no está disponible</h1>
-          <p className="text-muted mt-1 text-sm">Estará disponible el {dateStr}</p>
-        </div>
-        <Link
-          href="/plan"
-          className="bg-primary rounded-2xl px-6 py-3 text-sm font-semibold text-white"
-        >
-          Volver
-        </Link>
-      </div>
-    );
-  }
+  const todaySpain = new Date(nowSpain.getFullYear(), nowSpain.getMonth(), nowSpain.getDate());
 
   const [entry, initialStreak] = await Promise.all([
     getEntry(session.user.id, dayNumber),
     getStreak(session.user.id),
   ]);
+
+  if (entry) {
+    const entryDate = new Date(entry.date);
+    if (entryDate > todaySpain) {
+      const dateStr = entryDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
+      return (
+        <div className="flex min-h-[60vh] flex-col items-center justify-center gap-6 p-6 text-center">
+          <span className="text-5xl">🔒</span>
+          <div>
+            <h1 className="text-xl font-bold">Este devocional aún no está disponible</h1>
+            <p className="text-muted mt-1 text-sm">Estará disponible el {dateStr}</p>
+          </div>
+          <Link
+            href="/plan"
+            className="bg-primary rounded-2xl px-6 py-3 text-sm font-semibold text-white"
+          >
+            Volver
+          </Link>
+        </div>
+      );
+    }
+  }
+
   if (!entry) notFound();
 
   const response = entry.responses[0] ?? null;
