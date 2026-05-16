@@ -5,7 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { DevotionalClient } from '@/components/devotional/DevotionalClient';
 
 async function getEntry(userId: string, dayNumber: number) {
-  const now = new Date();
+  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Madrid' }));
   const month = now.getMonth() + 1;
   const year = now.getFullYear();
 
@@ -31,7 +31,8 @@ export default async function DevotionalDayPage({ params }: { params: Promise<{ 
   const dayNumber = parseInt(day, 10);
   if (isNaN(dayNumber) || dayNumber < 1 || dayNumber > 31) notFound();
 
-  const today = new Date().getDate();
+  const nowSpain = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Madrid' }));
+  const today = nowSpain.getDate();
 
   if (dayNumber > today) {
     const entry = await getEntry(session.user.id, dayNumber);
