@@ -57,9 +57,9 @@ export async function POST(
     create: { userId, dailyEntryId, ...sections, completedAt: now },
   });
 
-  // Marcar progreso del día
-  const dateOnly = new Date(entry.date);
-  dateOnly.setHours(0, 0, 0, 0);
+  // Marcar progreso del día — extraer componentes UTC para evitar offset de zona horaria
+  const d = entry.date as Date;
+  const dateOnly = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
 
   await prisma.userProgress.upsert({
     where: { userId_date: { userId, date: dateOnly } },
