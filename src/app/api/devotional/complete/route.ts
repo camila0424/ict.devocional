@@ -41,8 +41,11 @@ export async function POST(
   const userId = session.user.id;
   const now = new Date();
 
-  // Verificar que la entrada existe
-  const entry = await prisma.dailyEntry.findUnique({ where: { id: dailyEntryId } });
+  // Verificar que la entrada existe e incluir el plan para obtener mes/año canónicos
+  const entry = await prisma.dailyEntry.findUnique({
+    where: { id: dailyEntryId },
+    include: { plan: { select: { month: true, year: true } } },
+  });
   if (!entry) {
     return NextResponse.json(
       { success: false, error: 'Día no encontrado', code: 'NOT_FOUND' },
@@ -57,9 +60,9 @@ export async function POST(
     create: { userId, dailyEntryId, ...sections, completedAt: now },
   });
 
-  // Marcar progreso del día — extraer componentes UTC para evitar offset de zona horaria
-  const d = entry.date as Date;
-  const dateOnly = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  // Construir la fecha desde dayNumber + mes/año del plan (UTC) para evitar
+  // que entry.date tenga un offset si el seed se ejecutó en una zona UTC+
+  const dateOnly = new Date(Date.UTC(entry.plan.year, entry.plan.month - 1, entry.dayNumber));
 
   await prisma.userProgress.upsert({
     where: { userId_date: { userId, date: dateOnly } },

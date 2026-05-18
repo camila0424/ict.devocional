@@ -77,7 +77,7 @@ async function main() {
   });
 
   for (const { day, r1, r2, r3 } of MAY_PLAN) {
-    const date = new Date(2026, 4, day); // mes 4 = Mayo (0-indexed)
+    const date = new Date(Date.UTC(2026, 4, day)); // UTC para evitar offset de zona horaria
     const rawReadings = `${r1} / ${r2} / ${r3}`;
 
     const entry = await prisma.dailyEntry.upsert({

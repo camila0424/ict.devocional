@@ -47,7 +47,7 @@ async function getHomeData(userId: string) {
   const todayCompleted = (todayEntry?.responses[0]?.completedAt ?? null) !== null;
   const completedDays = progressRows
     .filter((p) => p.completed)
-    .map((p) => new Date(p.date).getDate());
+    .map((p) => new Date(p.date).getUTCDate());
 
   return {
     streak,
