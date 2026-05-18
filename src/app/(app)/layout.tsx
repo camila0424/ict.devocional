@@ -16,7 +16,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <NotificationBannerClient />
       <Sidebar userName={userName} userInitial={userInitial} />
       <div className="flex flex-1 justify-center">
-        <div className="bg-background flex min-h-dvh w-full flex-col overflow-x-hidden pb-20 md:max-w-170 md:pb-0 md:shadow-[0_0_48px_rgba(0,0,0,0.07)]">
+        <div className="bg-background flex min-h-dvh w-full flex-col overflow-x-clip pb-20 md:max-w-170 md:pb-0 md:shadow-[0_0_48px_rgba(0,0,0,0.07)]">
           <main className="flex-1">{children}</main>
           <TabBar />
         </div>
