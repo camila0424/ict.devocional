@@ -89,7 +89,9 @@ export function PlanDayList({ entries, today }: Props) {
                 {card}
               </button>
             ) : (
-              <Link href={`/devotional/${entry.dayNumber}`}>{card}</Link>
+              <Link href={`/devotional/${entry.dayNumber}`} className="block">
+                {card}
+              </Link>
             )}
           </li>
         );

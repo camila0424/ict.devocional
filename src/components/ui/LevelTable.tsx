@@ -21,53 +21,51 @@ export function LevelTable() {
       transition={{ delay: 0.25, duration: 0.3 }}
       className="border-border bg-surface overflow-hidden rounded-2xl border"
     >
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="border-border bg-primary/5 border-b">
-            <tr>
-              <th className="px-4 py-3 text-left font-semibold">Nivel</th>
-              <th className="px-4 py-3 text-left font-semibold">Nombre</th>
-              <th className="px-4 py-3 text-center font-semibold">Rango de días</th>
-              <th className="px-4 py-3 text-center font-semibold">Estado</th>
-            </tr>
-          </thead>
-          <tbody className="divide-border divide-y">
-            {LEVELS.map((level, idx) => {
-              const isCurrentLevel = idx === currentIndex;
-              const isPassed = totalDays > level.maxDays;
+      <table className="w-full text-sm">
+        <thead className="border-border bg-primary/5 border-b">
+          <tr>
+            <th className="px-4 py-3 text-left font-semibold">Nivel</th>
+            <th className="px-4 py-3 text-left font-semibold">Nombre</th>
+            <th className="hidden px-4 py-3 text-center font-semibold sm:table-cell">Días</th>
+            <th className="px-4 py-3 text-center font-semibold">Estado</th>
+          </tr>
+        </thead>
+        <tbody className="divide-border divide-y">
+          {LEVELS.map((level, idx) => {
+            const isCurrentLevel = idx === currentIndex;
+            const isPassed = totalDays > level.maxDays;
 
-              return (
-                <motion.tr
-                  key={level.id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.26 + idx * 0.02 }}
-                  className={`${
-                    isCurrentLevel ? 'bg-primary/5' : ''
-                  } hover:bg-primary/3 transition-colors`}
-                >
-                  <td className="px-4 py-3 text-xl">{level.emoji}</td>
-                  <td className="px-4 py-3 font-medium">{level.name}</td>
-                  <td className="text-muted px-4 py-3 text-center text-xs">
-                    {level.minDays}-{level.maxDays === Infinity ? '∞' : level.maxDays}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    {isCurrentLevel && (
-                      <div className="flex flex-col items-center gap-1">
-                        <span className="bg-primary inline-block rounded-full px-3 py-1 text-xs font-semibold text-white">
-                          Tú aquí
-                        </span>
-                        <span className="text-muted text-xs">{totalDays} días completados</span>
-                      </div>
-                    )}
-                    {isPassed && !isCurrentLevel && <span className="inline-block text-lg">✓</span>}
-                  </td>
-                </motion.tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+            return (
+              <motion.tr
+                key={level.id}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.26 + idx * 0.02 }}
+                className={`${
+                  isCurrentLevel ? 'bg-primary/5' : ''
+                } hover:bg-primary/3 transition-colors`}
+              >
+                <td className="px-4 py-3 text-xl">{level.emoji}</td>
+                <td className="px-4 py-3 font-medium">{level.name}</td>
+                <td className="text-muted hidden px-4 py-3 text-center text-xs sm:table-cell">
+                  {level.minDays}-{level.maxDays === Infinity ? '∞' : level.maxDays}
+                </td>
+                <td className="px-4 py-3 text-center">
+                  {isCurrentLevel && (
+                    <div className="flex flex-col items-center gap-1">
+                      <span className="bg-primary inline-block rounded-full px-3 py-1 text-xs font-semibold text-white">
+                        Tú aquí
+                      </span>
+                      <span className="text-muted text-xs">{totalDays} días</span>
+                    </div>
+                  )}
+                  {isPassed && !isCurrentLevel && <span className="inline-block text-lg">✓</span>}
+                </td>
+              </motion.tr>
+            );
+          })}
+        </tbody>
+      </table>
     </motion.div>
   );
 }
