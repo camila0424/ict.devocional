@@ -70,10 +70,11 @@ export async function GET(
     new Date(),
   );
 
-  if (rawStreak && streakState.current !== rawStreak.current) {
-    await prisma.streak.update({
+  if (streakState.current !== rawStreak?.current) {
+    await prisma.streak.upsert({
       where: { userId: session.user.id },
-      data: { current: streakState.current },
+      update: { current: streakState.current },
+      create: { userId: session.user.id, current: streakState.current, best: streakState.best },
     });
   }
 

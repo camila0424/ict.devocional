@@ -25,7 +25,7 @@ async function getHomeData(userId: string) {
     }),
     prisma.devotionalPlan.findUnique({
       where: { month_year: { month, year } },
-      select: { visionText: true, strategyText: true },
+      select: { visionTitle: true, visionText: true, strategyTitle: true, strategyText: true },
     }),
   ]);
 
@@ -35,6 +35,14 @@ async function getHomeData(userId: string) {
     lastCompletedAt: streakRaw?.lastCompletedAt ?? null,
   };
   const streak = refreshStreakOnLoad(streakState, now);
+
+  if (streak.current !== streakState.current) {
+    await prisma.streak.upsert({
+      where: { userId },
+      update: { current: streak.current },
+      create: { userId, current: streak.current, best: streak.best },
+    });
+  }
 
   const todayCompleted = (todayEntry?.responses[0]?.completedAt ?? null) !== null;
   const completedDays = progressRows
@@ -49,7 +57,9 @@ async function getHomeData(userId: string) {
     month,
     year,
     totalCompleted,
+    visionTitle: plan?.visionTitle ?? null,
     visionText: plan?.visionText ?? null,
+    strategyTitle: plan?.strategyTitle ?? null,
     strategyText: plan?.strategyText ?? null,
   };
 }

@@ -16,7 +16,9 @@ type Props = {
   streak: { current: number; best: number };
   todayCompleted: boolean;
   completedDays: number[];
+  visionTitle?: string | null;
   visionText?: string | null;
+  strategyTitle?: string | null;
   strategyText?: string | null;
 };
 
@@ -40,7 +42,9 @@ export function HomeClient({
   streak,
   todayCompleted,
   completedDays,
+  visionTitle,
   visionText,
+  strategyTitle,
   strategyText,
 }: Props) {
   const [videoOpen, setVideoOpen] = useState(false);
@@ -148,50 +152,42 @@ export function HomeClient({
       </motion.div>
 
       {/* Visión del mes */}
-      {(() => {
-        const vision = parsePlanText(visionText);
-        return (
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.35, duration: 0.3 }}
-            className="rounded-2xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950/40"
-          >
-            <div className="mb-2 flex items-center gap-2">
-              <span className="text-base">🌎</span>
-              <h2 className="font-bold text-blue-900 dark:text-blue-200">
-                Visión{vision?.label ? ` ${vision.label}` : ''}
-              </h2>
-            </div>
-            <p className="text-foreground/80 text-sm leading-relaxed">
-              {vision?.passage || '🙏 La visión de este mes estará disponible pronto.'}
-            </p>
-          </motion.div>
-        );
-      })()}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.35, duration: 0.3 }}
+        className="rounded-2xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-950/40"
+      >
+        <div className="mb-2 flex items-center gap-2">
+          <span className="text-base">🌎</span>
+          <h2 className="font-bold text-blue-900 dark:text-blue-200">
+            Visión del mes{visionTitle ? `: ${visionTitle}` : ''}
+          </h2>
+        </div>
+        <p className="text-foreground/80 text-sm leading-relaxed">
+          {parsePlanText(visionText)?.passage ||
+            '🙏 La visión de este mes estará disponible pronto.'}
+        </p>
+      </motion.div>
 
       {/* Estrategia del mes */}
-      {(() => {
-        const strategy = parsePlanText(strategyText);
-        return (
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4, duration: 0.3 }}
-            className="rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/30"
-          >
-            <div className="mb-2 flex items-center gap-2">
-              <span className="text-base">🧭</span>
-              <h2 className="font-bold text-amber-900 dark:text-amber-200">
-                Estrategia del mes{strategy?.label ? `: ${strategy.label}` : ''}
-              </h2>
-            </div>
-            <p className="text-foreground/80 text-sm leading-relaxed">
-              {strategy?.passage || '📌 La estrategia de este mes estará disponible pronto.'}
-            </p>
-          </motion.div>
-        );
-      })()}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4, duration: 0.3 }}
+        className="rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/30"
+      >
+        <div className="mb-2 flex items-center gap-2">
+          <span className="text-base">🧭</span>
+          <h2 className="font-bold text-amber-900 dark:text-amber-200">
+            Estrategia del mes{strategyTitle ? `: ${strategyTitle}` : ''}
+          </h2>
+        </div>
+        <p className="text-foreground/80 text-sm leading-relaxed">
+          {parsePlanText(strategyText)?.passage ||
+            '📌 La estrategia de este mes estará disponible pronto.'}
+        </p>
+      </motion.div>
 
       {/* Calendario Mayo */}
       <motion.div

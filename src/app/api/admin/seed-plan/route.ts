@@ -19,7 +19,9 @@ type EntryInput = {
 type Body = {
   month: number;
   year: number;
+  visionTitle?: string | null;
   visionText?: string | null;
+  strategyTitle?: string | null;
   strategyText?: string | null;
   entries: EntryInput[];
 };
@@ -47,7 +49,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body: Body = await req.json();
-  const { month, year, visionText, strategyText, entries } = body;
+  const { month, year, visionTitle, visionText, strategyTitle, strategyText, entries } = body;
 
   if (!month || !year) {
     return NextResponse.json(
@@ -64,12 +66,19 @@ export async function POST(req: NextRequest) {
 
   const plan = await prisma.devotionalPlan.upsert({
     where: { month_year: { month, year } },
-    update: { visionText: visionText ?? undefined, strategyText: strategyText ?? undefined },
+    update: {
+      visionTitle: visionTitle ?? undefined,
+      visionText: visionText ?? undefined,
+      strategyTitle: strategyTitle ?? undefined,
+      strategyText: strategyText ?? undefined,
+    },
     create: {
       month,
       year,
       title: `Plan devocional ${month}/${year}`,
+      visionTitle: visionTitle ?? undefined,
       visionText: visionText ?? undefined,
+      strategyTitle: strategyTitle ?? undefined,
       strategyText: strategyText ?? undefined,
     },
   });

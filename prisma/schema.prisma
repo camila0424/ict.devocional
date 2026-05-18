@@ -44,8 +44,10 @@ model DevotionalPlan {
   month        Int
   year         Int
   title        String
-  visionText   String?      @map("vision_text")
-  strategyText String?      @map("strategy_text")
+  visionTitle   String?      @map("vision_title")
+  visionText    String?      @map("vision_text")
+  strategyTitle String?      @map("strategy_title")
+  strategyText  String?      @map("strategy_text")
   createdAt    DateTime     @default(now()) @map("created_at")
   entries      DailyEntry[]
 
