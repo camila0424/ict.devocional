@@ -526,11 +526,6 @@ async function uploadPlan() {
   if (!secret)       { setStatus('statusUpload', 'error', '⚠ Falta el Admin Secret.'); return; }
   if (!month || !year) { setStatus('statusUpload', 'error', '⚠ Falta el mes o el año.'); return; }
 
-  // Construir visionText y strategyText combinando título + contenido
-  // Formato: "TITULO||CONTENIDO" — el dashboard lo separa
-  const visionText   = (vTitulo || vContenido)   ? `${vTitulo}||${vContenido}`   : null;
-  const strategyText = (eTitulo || eContenido)    ? `${eTitulo}||${eContenido}`   : null;
-
   setUploadLoading(true);
   setStatus('statusUpload', 'loading', '🚀 Subiendo plan a la app...');
 
@@ -542,7 +537,15 @@ async function uploadPlan() {
     : [];
 
   try {
-    const body = { month, year, visionText, strategyText, entries };
+    const body = {
+      month,
+      year,
+      visionTitle:    vTitulo    || null,
+      visionText:     vContenido || null,
+      strategyTitle:  eTitulo    || null,
+      strategyText:   eContenido || null,
+      entries,
+    };
 
     const res = await fetch(`${appUrl}/api/admin/seed-plan`, {
       method: 'POST',
