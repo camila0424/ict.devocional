@@ -18,9 +18,9 @@ export async function sendReminders() {
 
   const todayEntry = await prisma.dailyEntry.findFirst({
     where: { date: todaySpain },
-    select: { dayNumber: true },
+    select: { id: true },
   });
-  const devotionalUrl = todayEntry ? `/devotional/${todayEntry.dayNumber}` : '/';
+  const devotionalUrl = todayEntry ? '/#inicio' : '/';
 
   const subscriptions = await prisma.pushSubscription.findMany({
     include: { user: true },
