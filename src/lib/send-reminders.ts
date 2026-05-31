@@ -16,6 +16,13 @@ export async function sendReminders() {
   const turno: 'mañana' | 'tarde' | 'noche' =
     hourSpain < 12 ? 'mañana' : hourSpain < 17 ? 'tarde' : 'noche';
 
+  // Determine which hours fall in the current turno (based on user's stored local hour)
+  function matchesTurno(reminderHour: number): boolean {
+    if (turno === 'mañana') return reminderHour >= 4 && reminderHour < 12;
+    if (turno === 'tarde') return reminderHour >= 12 && reminderHour < 17;
+    return reminderHour >= 17 || reminderHour < 4; // noche
+  }
+
   const todayEntry = await prisma.dailyEntry.findFirst({
     where: { date: todaySpain },
     select: { id: true },
@@ -23,21 +30,30 @@ export async function sendReminders() {
   const devotionalUrl = todayEntry ? '/#inicio' : '/';
 
   const subscriptions = await prisma.pushSubscription.findMany({
-    include: { user: true },
+    include: { user: { include: { reminder: true } } },
+  });
+
+  // Only notify users whose reminder is enabled (or unset) and whose preferred time
+  // falls in the current turno so each user receives at most one notification per day.
+  const eligible = subscriptions.filter((s) => {
+    const r = s.user.reminder;
+    if (r === null) return turno === 'mañana'; // default: morning if no preference set
+    if (!r.enabled) return false;
+    return matchesTurno(r.hour);
   });
 
   const completedToday = await prisma.userProgress.findMany({
     where: {
       date: todaySpain,
       completed: true,
-      userId: { in: subscriptions.map((s) => s.userId) },
+      userId: { in: eligible.map((s) => s.userId) },
     },
     select: { userId: true },
   });
 
   const completedSet = new Set(completedToday.map((p) => p.userId));
-  const pending = subscriptions.filter((s) => !completedSet.has(s.userId));
-  const completed = subscriptions.filter((s) => completedSet.has(s.userId));
+  const pending = eligible.filter((s) => !completedSet.has(s.userId));
+  const completed = eligible.filter((s) => completedSet.has(s.userId));
 
   const recordatorio = getRecordatorio(turno);
   const fraseDelDia = getFraseDelDia(nowSpain);

@@ -17,7 +17,6 @@ export async function subscribePushInBackground(): Promise<boolean> {
   )
     return false;
   if (Notification.permission !== 'granted') return false;
-  if (localStorage.getItem('ict-notification-subscribed')) return true;
 
   try {
     const registration = (await Promise.race([
@@ -28,7 +27,16 @@ export async function subscribePushInBackground(): Promise<boolean> {
     const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
     if (!vapidKey) return false;
 
+    // Always verify the browser subscription is still alive before trusting localStorage
     const existing = await registration.pushManager.getSubscription();
+    if (!existing) {
+      // Subscription is gone (cleared storage, expired, reinstalled) — reset the flag
+      localStorage.removeItem('ict-notification-subscribed');
+    } else if (localStorage.getItem('ict-notification-subscribed')) {
+      // Subscription exists in browser and we previously saved it to the server → skip re-upload
+      return true;
+    }
+
     const subscription =
       existing ??
       (await registration.pushManager.subscribe({

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, BookOpen, X, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
@@ -209,12 +209,47 @@ export function DevotionalClient({ entry, initialResponse, initialStreak }: Prop
   const [showCelebration, setShowCelebration] = useState(false);
   const [streak, setStreak] = useState(initialStreak);
   const [showBibleBanner, setShowBibleBanner] = useState(true);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const completingRef = useRef(alreadyCompleted);
   const sectionsRef = useRef<HTMLDivElement>(null);
   const responsesRef = useRef(responses);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const savedValuesRef = useRef<ResponseState>(initialResponse ?? EMPTY_RESPONSE);
   useEffect(() => {
     responsesRef.current = responses;
   }, [responses]);
+
+  const saveFields = useCallback(
+    (vals: ResponseState) => {
+      const payload = Object.fromEntries(SECTIONS.map(({ key }) => [key, vals[key]]));
+      setSaveStatus('saving');
+      fetch('/api/devotional/save-fields', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dailyEntryId: entry.id, ...payload }),
+      })
+        .then((r) => {
+          if (r.ok) {
+            savedValuesRef.current = vals;
+            setSaveStatus('saved');
+            setTimeout(() => setSaveStatus('idle'), 2000);
+          }
+        })
+        .catch(() => setSaveStatus('idle'));
+    },
+    [entry.id],
+  );
+
+  // Debounced auto-save whenever response fields change
+  useEffect(() => {
+    const changed = SECTIONS.some(({ key }) => responses[key] !== savedValuesRef.current[key]);
+    if (!changed) return;
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => saveFields(responses), 1500);
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, [responses, saveFields]);
 
   const total = entry.readings.length;
   const checkedReadings = readingChecks.filter(Boolean).length;
@@ -327,6 +362,19 @@ export function DevotionalClient({ entry, initialResponse, initialStreak }: Prop
             transition={{ duration: 0.4 }}
           />
         </div>
+        <AnimatePresence>
+          {saveStatus !== 'idle' && (
+            <motion.p
+              key={saveStatus}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="mt-1.5 text-right text-xs text-blue-200"
+            >
+              {saveStatus === 'saving' ? 'Guardando…' : '✓ Guardado'}
+            </motion.p>
+          )}
+        </AnimatePresence>
       </div>
 
       <div className="flex flex-col gap-4 p-4 pb-10">

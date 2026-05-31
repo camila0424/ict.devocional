@@ -9,7 +9,7 @@ function vapidConfigured() {
   );
 }
 
-// Called by Vercel cron jobs — GET with Authorization: Bearer CRON_SECRET
+// Called by Vercel cron jobs (Authorization header) or cron-job.org (?secret= query param)
 export async function GET(req: NextRequest) {
   if (!vapidConfigured()) {
     return NextResponse.json(
@@ -18,7 +18,14 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  if (req.headers.get('Authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
+  const expectedSecret = process.env.CRON_SECRET;
+  const authHeader = req.headers.get('Authorization');
+  const querySecret = req.nextUrl.searchParams.get('secret');
+  const authorized =
+    authHeader === `Bearer ${expectedSecret}` ||
+    (querySecret !== null && querySecret === expectedSecret);
+
+  if (!authorized) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 

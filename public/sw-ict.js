@@ -1,3 +1,11 @@
+self.addEventListener('install', function(event) {
+  event.waitUntil(self.skipWaiting());
+});
+
+self.addEventListener('activate', function(event) {
+  event.waitUntil(self.clients.claim());
+});
+
 self.addEventListener('push', function(event) {
   if (!event.data) return;
 
@@ -15,7 +23,7 @@ self.addEventListener('push', function(event) {
     badge: '/icons/icon-192.png',
     vibrate: [200, 100, 200],
     data: { url: data.url ?? '/' },
-    requireInteraction: false,
+    requireInteraction: data.requireInteraction ?? false,
   };
 
   event.waitUntil(
