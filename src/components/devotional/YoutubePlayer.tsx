@@ -30,7 +30,7 @@ type Props = {
   month: number;
   watched: boolean;
   onWatched: () => void;
-  onAvailabilityChange: (available: boolean) => void;
+  onAvailabilityChange?: (available: boolean) => void;
 };
 
 export function YoutubePlayer({
@@ -54,15 +54,15 @@ export function YoutubePlayer({
       .then((data) => {
         if (data.videoId) {
           setState({ status: 'ready', video: data });
-          onAvailabilityChange(true);
+          onAvailabilityChange?.(true);
         } else {
           setState({ status: 'empty' });
-          onAvailabilityChange(false);
+          onAvailabilityChange?.(false);
         }
       })
       .catch(() => {
         setState({ status: 'empty' });
-        onAvailabilityChange(false);
+        onAvailabilityChange?.(false);
       });
   }, [dayNumber, month, onAvailabilityChange]);
 
@@ -143,9 +143,7 @@ export function YoutubePlayer({
           ✓ Video completado
         </p>
       ) : (
-        <p className="text-muted mt-3 text-center text-sm">
-          ▶ Mira el video completo para continuar
-        </p>
+        <p className="text-muted mt-3 text-center text-sm">▶ Mira el video completo</p>
       )}
     </div>
   );

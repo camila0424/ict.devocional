@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, BookOpen, X, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
@@ -205,31 +205,33 @@ export function DevotionalClient({ entry, initialResponse, initialStreak }: Prop
     entry.readings.map(() => alreadyCompleted),
   );
   const [videoWatched, setVideoWatched] = useState(alreadyCompleted);
-  const [videoAvailable, setVideoAvailable] = useState(true);
   const [celebrated, setCelebrated] = useState(alreadyCompleted);
   const [showCelebration, setShowCelebration] = useState(false);
   const [streak, setStreak] = useState(initialStreak);
   const [showBibleBanner, setShowBibleBanner] = useState(true);
   const completingRef = useRef(alreadyCompleted);
   const sectionsRef = useRef<HTMLDivElement>(null);
+  const responsesRef = useRef(responses);
+  useEffect(() => {
+    responsesRef.current = responses;
+  }, [responses]);
 
-  const handleVideoAvailability = useCallback((available: boolean) => {
-    setVideoAvailable(available);
-  }, []);
-
-  const total = entry.readings.length + (videoAvailable ? 1 : 0);
+  const total = entry.readings.length;
   const checkedReadings = readingChecks.filter(Boolean).length;
-  const progress = checkedReadings + (videoAvailable && videoWatched ? 1 : 0);
+  const progress = checkedReadings;
 
   useEffect(() => {
     if (progress === total && !celebrated && !completingRef.current) {
       completingRef.current = true;
       setCelebrated(true);
       setShowCelebration(true);
+      const sectionValues = Object.fromEntries(
+        SECTIONS.map(({ key }) => [key, responsesRef.current[key]]),
+      );
       fetch('/api/devotional/complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dailyEntryId: entry.id }),
+        body: JSON.stringify({ dailyEntryId: entry.id, ...sectionValues }),
       })
         .then((r) => r.json())
         .then((data) => {
@@ -371,7 +373,6 @@ export function DevotionalClient({ entry, initialResponse, initialStreak }: Prop
           month={parseInt(entry.date.split('-')[1]!, 10)}
           watched={videoWatched}
           onWatched={() => setVideoWatched(true)}
-          onAvailabilityChange={handleVideoAvailability}
         />
 
         {/* Banner completado */}
