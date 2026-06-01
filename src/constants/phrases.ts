@@ -718,7 +718,7 @@ export function getFraseDelDia(date: Date = new Date()): string {
   const start = new Date(date.getFullYear(), 0, 0);
   const diff = date.getTime() - start.getTime();
   const dayOfYear = Math.floor(diff / (1000 * 60 * 60 * 24));
-  const index = (dayOfYear * 24 + date.getHours()) % FRASES_MOTIVACIONALES.length;
+  const index = dayOfYear % FRASES_MOTIVACIONALES.length;
   return FRASES_MOTIVACIONALES[index] ?? FRASES_MOTIVACIONALES[0]!;
 }
 
