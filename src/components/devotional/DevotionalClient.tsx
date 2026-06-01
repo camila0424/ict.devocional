@@ -203,10 +203,29 @@ export function DevotionalClient({ entry, initialResponse, initialStreak }: Prop
   const entryMonthRaw = entryDate.toLocaleString('es-ES', { month: 'long' });
   const planLabel = `${entryMonthRaw.charAt(0).toUpperCase()}${entryMonthRaw.slice(1)} ${entryDate.getUTCFullYear()}`;
 
-  const [responses, setResponses] = useState<ResponseState>(initialResponse ?? EMPTY_RESPONSE);
-  const [readingChecks, setReadingChecks] = useState<boolean[]>(() =>
-    entry.readings.map(() => alreadyCompleted),
-  );
+  const [responses, setResponses] = useState<ResponseState>(() => {
+    if (alreadyCompleted) return initialResponse ?? EMPTY_RESPONSE;
+    try {
+      const raw = localStorage.getItem(`devotional-draft-${entry.dayNumber}`);
+      if (!raw) return initialResponse ?? EMPTY_RESPONSE;
+      const draft = JSON.parse(raw) as { responses?: ResponseState };
+      return draft.responses ?? initialResponse ?? EMPTY_RESPONSE;
+    } catch {
+      return initialResponse ?? EMPTY_RESPONSE;
+    }
+  });
+  const [readingChecks, setReadingChecks] = useState<boolean[]>(() => {
+    if (alreadyCompleted) return entry.readings.map(() => true);
+    try {
+      const raw = localStorage.getItem(`devotional-draft-${entry.dayNumber}`);
+      if (!raw) return entry.readings.map(() => false);
+      const draft = JSON.parse(raw) as { readingChecks?: boolean[] };
+      return draft.readingChecks ?? entry.readings.map(() => false);
+    } catch {
+      return entry.readings.map(() => false);
+    }
+  });
+  const hydrated = true;
   const [videoWatched, setVideoWatched] = useState(alreadyCompleted);
   const [celebrated, setCelebrated] = useState(alreadyCompleted);
   const [showCelebration, setShowCelebration] = useState(false);
@@ -218,6 +237,15 @@ export function DevotionalClient({ entry, initialResponse, initialStreak }: Prop
   const responsesRef = useRef(responses);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedValuesRef = useRef<ResponseState>(initialResponse ?? EMPTY_RESPONSE);
+  // Persist draft to localStorage on every change (only after hydration to avoid overwriting draft with server values)
+  useEffect(() => {
+    if (!hydrated || alreadyCompleted) return;
+    localStorage.setItem(
+      `devotional-draft-${entry.dayNumber}`,
+      JSON.stringify({ responses, readingChecks }),
+    );
+  }, [responses, readingChecks, hydrated, alreadyCompleted, entry.dayNumber]);
+
   useEffect(() => {
     responsesRef.current = responses;
   }, [responses]);
@@ -275,10 +303,11 @@ export function DevotionalClient({ entry, initialResponse, initialStreak }: Prop
         .then((data) => {
           if (data.data?.streak) setStreak(data.data.streak);
           window.dispatchEvent(new Event('devotional-completed'));
+          localStorage.removeItem(`devotional-draft-${entry.dayNumber}`);
         })
         .catch(() => {});
     }
-  }, [progress, total, celebrated, entry.id]);
+  }, [progress, total, celebrated, entry.id, entry.dayNumber]);
 
   function toggleReading(idx: number) {
     setReadingChecks((prev) => {
