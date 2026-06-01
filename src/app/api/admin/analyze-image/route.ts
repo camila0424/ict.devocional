@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -17,9 +17,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: CORS });
   }
 
-  if (!process.env.ANTHROPIC_API_KEY) {
+  if (!process.env.GOOGLE_AI_API_KEY) {
     return NextResponse.json(
-      { error: 'ANTHROPIC_API_KEY no configurada en el servidor' },
+      { error: 'GOOGLE_AI_API_KEY no configurada en el servidor' },
       { status: 500, headers: CORS },
     );
   }
@@ -29,30 +29,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'imageBase64 requerido' }, { status: 400, headers: CORS });
   }
 
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY);
+  const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
-  let response;
+  let result;
   try {
-    response = await client.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 2000,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'image',
-              source: {
-                type: 'base64',
-                media_type:
-                  (mimeType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp') ||
-                  'image/jpeg',
-                data: imageBase64,
-              },
-            },
-            {
-              type: 'text',
-              text: `Eres un extractor de datos de planes devocionales de la iglesia ICT.
+    result = await model.generateContent([
+      {
+        inlineData: {
+          mimeType:
+            (mimeType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp') || 'image/jpeg',
+          data: imageBase64,
+        },
+      },
+      {
+        text: `Eres un extractor de datos de planes devocionales de la iglesia ICT.
 
 Analiza esta imagen del plan devocional mensual y extrae TODOS los días con sus 3 lecturas.
 
@@ -67,18 +58,14 @@ Responde SOLO con JSON válido, sin texto adicional ni backticks:
 }
 
 Usa las abreviaturas exactas de la imagen. Extrae TODOS los días.`,
-            },
-          ],
-        },
-      ],
-    });
+      },
+    ]);
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Error al llamar a la API de Anthropic';
+    const message = err instanceof Error ? err.message : 'Error al llamar a la API de Gemini';
     return NextResponse.json({ error: message }, { status: 502, headers: CORS });
   }
 
-  const firstBlock = response.content[0];
-  const rawText = firstBlock?.type === 'text' ? firstBlock.text.trim() : '';
+  const rawText = result.response.text().trim();
   const cleaned = rawText.replace(/```json|```/g, '').trim();
 
   try {
@@ -86,7 +73,7 @@ Usa las abreviaturas exactas de la imagen. Extrae TODOS los días.`,
     return NextResponse.json(data, { headers: CORS });
   } catch {
     return NextResponse.json(
-      { error: 'No se pudo parsear la respuesta de Claude', raw: rawText },
+      { error: 'No se pudo parsear la respuesta de Gemini', raw: rawText },
       { status: 422, headers: CORS },
     );
   }
