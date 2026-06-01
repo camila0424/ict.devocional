@@ -19,6 +19,8 @@ async function getPlanData(userId: string) {
 
   return {
     today: now.getDate(),
+    month,
+    year,
     entries: entries.map((e) => ({
       dayNumber: e.dayNumber,
       rawReadings: e.rawReadings as string,
@@ -32,7 +34,7 @@ export default async function PlanPage() {
   const session = await auth();
   if (!session?.user?.id) redirect('/login');
 
-  const { entries, today } = await getPlanData(session.user.id);
+  const { entries, today, month, year } = await getPlanData(session.user.id);
   const completedCount = entries.filter((e) => e.completed).length;
 
   const rawMonth = new Date(year, month - 1, 1).toLocaleString('es-ES', { month: 'long' });
