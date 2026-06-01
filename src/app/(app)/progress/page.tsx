@@ -16,12 +16,22 @@ const CURRENT_MONTH = NOW.getMonth() + 1;
 const CURRENT_YEAR = NOW.getFullYear();
 
 export default function ProgressPage() {
-  const { data, isLoading } = useProgress(YEAR_MONTH);
+  const { data, isLoading, error } = useProgress(YEAR_MONTH);
 
-  if (isLoading || !data) {
+  if (isLoading) {
     return (
       <div className="flex min-h-full flex-col items-center justify-center p-8">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--color-primary)] border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="flex min-h-full flex-col items-center justify-center gap-4 p-8 text-center">
+        <p className="text-4xl">😕</p>
+        <p className="font-bold">No se pudo cargar tu progreso</p>
+        <p className="text-muted text-sm">Revisa tu conexión e intenta de nuevo</p>
       </div>
     );
   }
