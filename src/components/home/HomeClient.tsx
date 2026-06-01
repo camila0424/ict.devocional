@@ -22,10 +22,7 @@ type Props = {
   strategyText?: string | null;
 };
 
-const DAYS_IN_MAY = 31;
 const WEEK_LABELS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
-// 1 May 2026 = Friday → offset 4 (L=0)
-const MAY_2026_OFFSET = 4;
 
 function parsePlanText(text: string | null | undefined): { label: string; passage: string } | null {
   if (!text) return null;
@@ -39,6 +36,8 @@ function parsePlanText(text: string | null | undefined): { label: string; passag
 export function HomeClient({
   userName,
   day,
+  month,
+  year,
   streak,
   todayCompleted,
   completedDays,
@@ -48,7 +47,12 @@ export function HomeClient({
   strategyText,
 }: Props) {
   const [videoOpen, setVideoOpen] = useState(false);
-  const days = Array.from({ length: DAYS_IN_MAY }, (_, i) => i + 1);
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const firstWeekday = new Date(year, month - 1, 1).getDay();
+  const monthOffset = firstWeekday === 0 ? 6 : firstWeekday - 1;
+  const rawMonth = new Date(year, month - 1, 1).toLocaleString('es-ES', { month: 'long' });
+  const monthLabel = rawMonth.charAt(0).toUpperCase() + rawMonth.slice(1);
+  const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
   return (
     <div className="flex flex-col gap-4 p-5 pb-8">
@@ -125,7 +129,9 @@ export function HomeClient({
             )}
           >
             <div>
-              <p className="text-sm font-medium opacity-80">Día {day} de Mayo</p>
+              <p className="text-sm font-medium opacity-80">
+                Día {day} de {monthLabel}
+              </p>
               <p className="text-base font-bold">
                 {todayCompleted ? '✓ Devocional completado ✨' : 'Comenzar devocional de hoy'}
               </p>
@@ -189,7 +195,7 @@ export function HomeClient({
         </p>
       </motion.div>
 
-      {/* Calendario Mayo */}
+      {/* Calendario del mes */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
@@ -197,9 +203,11 @@ export function HomeClient({
         className="border-border bg-surface rounded-2xl border p-4"
       >
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-bold">Mayo 2026</h2>
+          <h2 className="font-bold">
+            {monthLabel} {year}
+          </h2>
           <span className="text-muted text-sm">
-            {completedDays.length}/{DAYS_IN_MAY}
+            {completedDays.length}/{daysInMonth}
           </span>
         </div>
 
@@ -213,7 +221,7 @@ export function HomeClient({
 
         <div className="grid grid-cols-7 gap-y-1">
           {/* Espaciado para el offset del mes */}
-          {Array.from({ length: MAY_2026_OFFSET }).map((_, i) => (
+          {Array.from({ length: monthOffset }).map((_, i) => (
             <div key={`offset-${i}`} />
           ))}
           {days.map((d) => {

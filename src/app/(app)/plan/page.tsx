@@ -35,10 +35,15 @@ export default async function PlanPage() {
   const { entries, today } = await getPlanData(session.user.id);
   const completedCount = entries.filter((e) => e.completed).length;
 
+  const rawMonth = new Date(year, month - 1, 1).toLocaleString('es-ES', { month: 'long' });
+  const monthLabel = rawMonth.charAt(0).toUpperCase() + rawMonth.slice(1);
+
   return (
     <div className="flex flex-col gap-4 p-5 pb-8">
       <div>
-        <h1 className="text-2xl font-extrabold">Plan Mayo 2026</h1>
+        <h1 className="text-2xl font-extrabold">
+          Plan {monthLabel} {year}
+        </h1>
         <p className="text-muted mt-0.5 text-sm">
           {completedCount} de {entries.length} días completados
         </p>

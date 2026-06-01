@@ -199,6 +199,9 @@ type Props = {
 export function DevotionalClient({ entry, initialResponse, initialStreak }: Props) {
   const router = useRouter();
   const alreadyCompleted = !!initialResponse?.completedAt;
+  const entryDate = new Date(entry.date);
+  const entryMonthRaw = entryDate.toLocaleString('es-ES', { month: 'long' });
+  const planLabel = `${entryMonthRaw.charAt(0).toUpperCase()}${entryMonthRaw.slice(1)} ${entryDate.getUTCFullYear()}`;
 
   const [responses, setResponses] = useState<ResponseState>(initialResponse ?? EMPTY_RESPONSE);
   const [readingChecks, setReadingChecks] = useState<boolean[]>(() =>
@@ -348,7 +351,7 @@ export function DevotionalClient({ entry, initialResponse, initialStreak }: Prop
             <ArrowLeft size={18} />
           </button>
           <div className="flex-1">
-            <p className="text-xs font-medium text-blue-200">Mayo 2026</p>
+            <p className="text-xs font-medium text-blue-200">{planLabel}</p>
             <h1 className="text-lg font-bold text-white">Día {entry.dayNumber}</h1>
           </div>
           <span className="text-sm font-semibold text-blue-200">
