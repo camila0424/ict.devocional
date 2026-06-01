@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import Groq from 'groq-sdk';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -17,9 +17,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: CORS });
   }
 
-  if (!process.env.GOOGLE_AI_API_KEY) {
+  if (!process.env.GROQ_API_KEY) {
     return NextResponse.json(
-      { error: 'GOOGLE_AI_API_KEY no configurada en el servidor' },
+      { error: 'GROQ_API_KEY no configurada en el servidor' },
       { status: 500, headers: CORS },
     );
   }
@@ -29,21 +29,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'imageBase64 requerido' }, { status: 400, headers: CORS });
   }
 
-  const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY);
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+  const client = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-  let result;
+  let response;
   try {
-    result = await model.generateContent([
-      {
-        inlineData: {
-          mimeType:
-            (mimeType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp') || 'image/jpeg',
-          data: imageBase64,
-        },
-      },
-      {
-        text: `Eres un extractor de datos de planes devocionales de la iglesia ICT.
+    response = await client.chat.completions.create({
+      model: 'llama-3.2-11b-vision-preview',
+      max_tokens: 2000,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'image_url',
+              image_url: {
+                url: `data:${mimeType || 'image/jpeg'};base64,${imageBase64}`,
+              },
+            },
+            {
+              type: 'text',
+              text: `Eres un extractor de datos de planes devocionales de la iglesia ICT.
 
 Analiza esta imagen del plan devocional mensual y extrae TODOS los días con sus 3 lecturas.
 
@@ -58,14 +63,17 @@ Responde SOLO con JSON válido, sin texto adicional ni backticks:
 }
 
 Usa las abreviaturas exactas de la imagen. Extrae TODOS los días.`,
-      },
-    ]);
+            },
+          ],
+        },
+      ],
+    });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Error al llamar a la API de Gemini';
+    const message = err instanceof Error ? err.message : 'Error al llamar a la API de Groq';
     return NextResponse.json({ error: message }, { status: 502, headers: CORS });
   }
 
-  const rawText = result.response.text().trim();
+  const rawText = response.choices[0]?.message?.content?.trim() ?? '';
   const cleaned = rawText.replace(/```json|```/g, '').trim();
 
   try {
@@ -73,7 +81,7 @@ Usa las abreviaturas exactas de la imagen. Extrae TODOS los días.`,
     return NextResponse.json(data, { headers: CORS });
   } catch {
     return NextResponse.json(
-      { error: 'No se pudo parsear la respuesta de Gemini', raw: rawText },
+      { error: 'No se pudo parsear la respuesta de Groq', raw: rawText },
       { status: 422, headers: CORS },
     );
   }
