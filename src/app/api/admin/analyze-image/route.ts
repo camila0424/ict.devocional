@@ -31,26 +31,28 @@ export async function POST(req: NextRequest) {
 
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-  const response = await client.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 2000,
-    messages: [
-      {
-        role: 'user',
-        content: [
-          {
-            type: 'image',
-            source: {
-              type: 'base64',
-              media_type:
-                (mimeType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp') ||
-                'image/jpeg',
-              data: imageBase64,
+  let response;
+  try {
+    response = await client.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 2000,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: {
+                type: 'base64',
+                media_type:
+                  (mimeType as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp') ||
+                  'image/jpeg',
+                data: imageBase64,
+              },
             },
-          },
-          {
-            type: 'text',
-            text: `Eres un extractor de datos de planes devocionales de la iglesia ICT.
+            {
+              type: 'text',
+              text: `Eres un extractor de datos de planes devocionales de la iglesia ICT.
 
 Analiza esta imagen del plan devocional mensual y extrae TODOS los días con sus 3 lecturas.
 
@@ -65,11 +67,15 @@ Responde SOLO con JSON válido, sin texto adicional ni backticks:
 }
 
 Usa las abreviaturas exactas de la imagen. Extrae TODOS los días.`,
-          },
-        ],
-      },
-    ],
-  });
+            },
+          ],
+        },
+      ],
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Error al llamar a la API de Anthropic';
+    return NextResponse.json({ error: message }, { status: 502, headers: CORS });
+  }
 
   const firstBlock = response.content[0];
   const rawText = firstBlock?.type === 'text' ? firstBlock.text.trim() : '';
