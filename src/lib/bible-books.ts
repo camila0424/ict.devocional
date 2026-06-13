@@ -17,7 +17,6 @@ export interface BibleReading {
 }
 
 // Abreviaturas ICT → key del JSON
-// Las únicas que difieren del índice estándar son las 6 primeras
 export const ICT_TO_KEY: Record<string, string> = {
   He: 'hechos', // ICT usa "He",    índice usa "Hch"
   Salm: 'salmos', // ICT usa "Salm",  índice usa "Sal"
@@ -25,6 +24,9 @@ export const ICT_TO_KEY: Record<string, string> = {
   Rut: 'rut', // ICT usa "Rut",   índice usa "Rt"
   '1 Sam': '1_samuel', // ICT usa "1 Sam", índice usa "1 S"
   '2 Sam': '2_samuel', // ICT usa "2 Sam", índice usa "2 S"
+  Mar: 'marcos', // ICT usa "Mar",   índice usa "Mc"
+  Dan: 'daniel', // ICT usa "Dan",   índice usa "Dn"
+  Hag: 'hageo', // ICT usa "Hag",   índice usa "Hg"
   // Resto coincide con el índice
   Gn: 'genesis',
   Ex: 'exodo',
