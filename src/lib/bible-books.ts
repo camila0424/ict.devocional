@@ -18,7 +18,7 @@ export interface BibleReading {
 
 // Abreviaturas ICT → key del JSON
 export const ICT_TO_KEY: Record<string, string> = {
-  He: 'hechos', // ICT usa "He",    índice usa "Hch"
+  He: 'hebreos', // ICT usa "He" para Hebreos (feb); Hechos es "Hchs" (abr)
   Salm: 'salmos', // ICT usa "Salm",  índice usa "Sal"
   Rom: 'romanos', // ICT usa "Rom",   índice usa "Ro"
   Rut: 'rut', // ICT usa "Rut",   índice usa "Rt"
@@ -42,6 +42,12 @@ export const ICT_TO_KEY: Record<string, string> = {
   Na: 'nahum', // ICT usa "Na",    índice usa "Nah"
   Ag: 'hageo', // ICT usa "Ag",    índice usa "Hg"
   Zc: 'zacarias', // ICT usa "Zc",    índice usa "Zac"
+  Apo: 'apocalipsis', // ICT usa "Apo",   índice usa "Ap"
+  Juan: 'juan', // ICT usa "Juan",  índice usa "Jn"
+  '1 Cor': '1_corintios', // ICT usa "1 Cor", índice usa "1 Co"
+  '2 Cor': '2_corintios', // ICT usa "2 Cor", índice usa "2 Co"
+  '2 Crón': '2_cronicas', // ICT usa "2 Crón" (variante de "2 Cró")
+  Éx: 'exodo', // ICT usa "Éx",    índice usa "Ex"
   '1 Tes': '1_tesalonicenses', // ICT usa "1 Tes", índice usa "1 Ts"
   '2 Tes': '2_tesalonicenses', // ICT usa "2 Tes", índice usa "2 Ts"
   Gal: 'galatas', // ICT usa "Gal",  índice usa "Gl"
