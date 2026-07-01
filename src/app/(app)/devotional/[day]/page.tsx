@@ -18,6 +18,17 @@ async function getEntry(userId: string, dayNumber: number) {
   });
 }
 
+async function getPlanExists(): Promise<boolean> {
+  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Madrid' }));
+  const month = now.getMonth() + 1;
+  const year = now.getFullYear();
+  const plan = await prisma.devotionalPlan.findUnique({
+    where: { month_year: { month, year } },
+    select: { id: true },
+  });
+  return plan !== null;
+}
+
 async function getStreak(userId: string) {
   const streak = await prisma.streak.findUnique({ where: { userId } });
   return streak?.current ?? 0;
@@ -39,29 +50,42 @@ export default async function DevotionalDayPage({ params }: { params: Promise<{ 
     getStreak(session.user.id),
   ]);
 
-  if (entry) {
-    const entryDate = new Date(entry.date);
-    if (entryDate > todaySpain) {
-      const dateStr = entryDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
+  if (!entry) {
+    const planExists = await getPlanExists();
+    if (!planExists) {
       return (
-        <div className="flex min-h-[60vh] flex-col items-center justify-center gap-6 p-6 text-center">
-          <span className="text-5xl">🔒</span>
-          <div>
-            <h1 className="text-xl font-bold">Este devocional aún no está disponible</h1>
-            <p className="text-muted mt-1 text-sm">Estará disponible el {dateStr}</p>
+        <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 p-6 text-center">
+          <div className="bg-surface border-border rounded-2xl border p-6">
+            <p className="text-4xl">📖</p>
+            <p className="text-muted mt-3 text-sm">
+              Aún no hemos subido el devocional de este mes. ¡Pronto estará disponible para ti!
+            </p>
           </div>
-          <Link
-            href="/plan"
-            className="bg-primary rounded-2xl px-6 py-3 text-sm font-semibold text-white"
-          >
-            Volver
-          </Link>
         </div>
       );
     }
+    notFound();
   }
 
-  if (!entry) notFound();
+  const entryDate = new Date(entry.date);
+  if (entryDate > todaySpain) {
+    const dateStr = entryDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-6 p-6 text-center">
+        <span className="text-5xl">🔒</span>
+        <div>
+          <h1 className="text-xl font-bold">Este devocional aún no está disponible</h1>
+          <p className="text-muted mt-1 text-sm">Estará disponible el {dateStr}</p>
+        </div>
+        <Link
+          href="/plan"
+          className="bg-primary rounded-2xl px-6 py-3 text-sm font-semibold text-white"
+        >
+          Volver
+        </Link>
+      </div>
+    );
+  }
 
   const response = entry.responses[0] ?? null;
 
