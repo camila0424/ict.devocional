@@ -46,6 +46,8 @@ export const ICT_TO_KEY: Record<string, string> = {
   '2 Tes': '2_tesalonicenses', // ICT usa "2 Tes", índice usa "2 Ts"
   Gal: 'galatas', // ICT usa "Gal",  índice usa "Gl"
   Re: '1_reyes', // ICT usa "Re",   índice usa "1 R"
+  '1 Re': '1_reyes', // ICT usa "1 Re", índice usa "1 R"
+  '2 Re': '2_reyes', // ICT usa "2 Re", índice usa "2 R"
   // Resto coincide con el índice
   Gn: 'genesis',
   Ex: 'exodo',
