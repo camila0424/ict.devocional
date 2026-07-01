@@ -18,6 +18,7 @@ export async function GET(req: NextRequest) {
       },
     );
   } catch (e) {
+    console.error('[bible] ref:', ref, '| error:', (e as Error).message);
     return Response.json(
       { success: false, error: (e as Error).message, code: 'PARSE_ERROR' },
       { status: 422 },
