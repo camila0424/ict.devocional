@@ -120,6 +120,30 @@ export const ICT_TO_KEY: Record<string, string> = {
   '3 Jn': '3_juan',
   Jud: 'judas',
   Ap: 'apocalipsis',
+  // Variantes de la lista alfabética / abreviaturas oficiales (ver Biblia Filament)
+  Jc: 'jueces',
+  '1 Sm': '1_samuel',
+  '2 Sm': '2_samuel',
+  Ne: 'nehemias',
+  Jb: 'job',
+  Ct: 'cantares',
+  Jr: 'jeremias',
+  Ab: 'abdias',
+  Mi: 'miqueas',
+  Ha: 'habacuc',
+  So: 'sofonias',
+  Za: 'zacarias',
+  Ml: 'malaquias',
+  Mr: 'marcos',
+  Rm: 'romanos',
+  Ga: 'galatas',
+  Fil: 'filipenses',
+  '1 Tm': '1_timoteo',
+  '2 Tm': '2_timoteo',
+  Tt: 'tito',
+  Hb: 'hebreos',
+  St: 'santiago',
+  Jds: 'judas',
 };
 
 export const KEY_TO_NAME: Record<string, string> = {
@@ -197,7 +221,7 @@ export function parseReference(fullRef: string): {
   bookName: string;
   chapters: BibleChapter[];
 } {
-  const match = fullRef.trim().match(/^(\d+\s+\w+|\w+)\s+(.+)$/);
+  const match = fullRef.trim().match(/^(\d+\s+[A-Za-zÀ-ÿ]+|[A-Za-zÀ-ÿ]+)\s+(.+)$/);
   if (!match) throw new Error(`Referencia inválida: "${fullRef}"`);
   const [, abbr, ref] = match;
   const bookKey = ICT_TO_KEY[abbr!];
