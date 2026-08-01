@@ -455,6 +455,32 @@ export function DevotionalClient({ entry, initialResponse, initialStreak }: Prop
           onWatched={() => setVideoWatched(true)}
         />
 
+        {/* Podcast de la semana */}
+        <div className="border-border bg-surface rounded-2xl border p-4">
+          <h2 className="mb-3 font-bold">🎙️ Podcast de la semana</h2>
+          <iframe
+            src="https://open.spotify.com/embed/show/1Hd8DrkokBajPMo1gjlt5y?utm_source=generator"
+            width="100%"
+            height="152"
+            loading="lazy"
+            allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+            className="rounded-lg"
+          />
+        </div>
+
+        {/* Blog del día */}
+        <div className="border-border bg-surface rounded-2xl border p-4">
+          <h2 className="mb-3 font-bold">📝 Blog del día</h2>
+          <a
+            href="https://www.facebook.com/share/19BeYgnnjj/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-muted mt-3 block text-center text-sm"
+          >
+            Ver publicación de hoy →
+          </a>
+        </div>
+
         {/* Banner completado */}
         {celebrated && (
           <div className="flex items-center gap-3 rounded-2xl border border-green-200 bg-green-50 px-4 py-3 dark:border-green-800 dark:bg-green-950/40">
