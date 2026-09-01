@@ -345,6 +345,12 @@ ${readingsText}
 Aplicación teoterápica con el líder Jimmy Chamorro:
 ${videoLink}
 
+Podcast de la semana con la líder Zaidy Mora:
+https://open.spotify.com/show/1Hd8DrkokBajPMo1gjlt5y
+
+Reflexión diaria:
+https://www.facebook.com/share/19BeYgnnjj/
+
 Descarga nuestra aplicación y no te pierdas ningún detalle:
 https://ict-devocional.vercel.app`;
 
@@ -555,9 +561,9 @@ https://ict-devocional.vercel.app`;
           />
         </div>
 
-        {/* Blog del día */}
+        {/* Reflexión diaria */}
         <div className="border-border bg-surface rounded-2xl border p-4">
-          <h2 className="mb-3 font-bold">📝 Blog del día</h2>
+          <h2 className="mb-3 font-bold">📝 Reflexión diaria</h2>
           <a
             href="https://www.facebook.com/share/19BeYgnnjj/"
             target="_blank"
