@@ -95,14 +95,16 @@ export function HomeClient({
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.1, duration: 0.3 }}
       >
-        <StreakCard
-          current={streak.current}
-          best={streak.best}
-          displayState={streak.displayState}
-          frozenDays={streak.frozenDays}
-          bestStreakMonth={streak.bestStreakMonth}
-          bestStreakYear={streak.bestStreakYear}
-        />
+        <Link href="/progress">
+          <StreakCard
+            current={streak.current}
+            best={streak.best}
+            displayState={streak.displayState}
+            frozenDays={streak.frozenDays}
+            bestStreakMonth={streak.bestStreakMonth}
+            bestStreakYear={streak.bestStreakYear}
+          />
+        </Link>
       </motion.div>
 
       {/* Nivel card */}

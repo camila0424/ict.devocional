@@ -2,6 +2,7 @@
 
 import { motion } from 'motion/react';
 import { Trophy } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const MONTH_NAMES = [
   'Enero',
@@ -47,16 +48,22 @@ export function StreakCard({
       initial={{ opacity: 0, scale: 0.92 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ type: 'spring', stiffness: 280, damping: 22 }}
-      className="rounded-2xl p-6 text-white shadow-lg"
-      style={{
-        background: isLost
-          ? 'linear-gradient(135deg, #475569, #64748b)'
-          : 'linear-gradient(135deg, var(--color-primary-dark), var(--color-primary))',
-      }}
+      className={cn(
+        'rounded-2xl p-6 shadow-lg',
+        isLost ? 'border-border bg-surface text-foreground border' : 'text-white',
+      )}
+      style={
+        isLost
+          ? undefined
+          : {
+              background:
+                'linear-gradient(135deg, var(--color-primary-dark), var(--color-primary))',
+            }
+      }
     >
       <div className="flex items-center justify-between">
         <div className="flex flex-col">
-          <p className="text-sm font-medium text-blue-200">
+          <p className={cn('text-sm font-medium', isLost ? 'text-muted' : 'text-blue-200')}>
             {isLost ? 'Racha perdida' : 'Racha actual'}
           </p>
           <div className="flex items-end gap-1">
@@ -69,7 +76,9 @@ export function StreakCard({
             >
               {current}
             </motion.span>
-            <span className="mb-2 text-xl text-blue-200">días</span>
+            <span className={cn('mb-2 text-xl', isLost ? 'text-muted' : 'text-blue-200')}>
+              días
+            </span>
           </div>
 
           {isFrozen && (
@@ -80,9 +89,11 @@ export function StreakCard({
               </span>
             </div>
           )}
-          {isLost && <p className="mt-2 text-sm text-blue-100">Empecemos de nuevo 🌱</p>}
+          {isLost && <p className="mt-2 text-sm">Empecemos de nuevo 🌱</p>}
 
-          <div className="mt-2 flex items-center gap-1 text-blue-300">
+          <div
+            className={cn('mt-2 flex items-center gap-1', isLost ? 'text-muted' : 'text-blue-300')}
+          >
             <Trophy size={14} />
             <span className="text-sm">
               Mejor racha: {best} días{bestLabel}
