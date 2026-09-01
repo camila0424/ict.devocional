@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
-import { ArrowLeft, BookOpen, X, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
+import { ArrowLeft, BookOpen, X, ChevronDown, ChevronUp, Loader2, Share2 } from 'lucide-react';
 import { fetchBibleReading } from '@/services/bibleService';
 
 import { cn } from '@/lib/utils';
@@ -232,6 +232,8 @@ export function DevotionalClient({ entry, initialResponse, initialStreak }: Prop
   const [streak, setStreak] = useState(initialStreak);
   const [showBibleBanner, setShowBibleBanner] = useState(true);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [videoId, setVideoId] = useState<string | null>(null);
+  const [shareFeedback, setShareFeedback] = useState<string | null>(null);
   const completingRef = useRef(alreadyCompleted);
   const sectionsRef = useRef<HTMLDivElement>(null);
   const responsesRef = useRef(responses);
@@ -309,6 +311,46 @@ export function DevotionalClient({ entry, initialResponse, initialStreak }: Prop
     }
   }, [progress, total, celebrated, entry.id, entry.dayNumber]);
 
+  async function handleShare() {
+    const dateLabel = entryDate.toLocaleDateString('es-ES', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+    const readingsText = entry.readings.map((r) => `${r.bookFull} ${r.reference}`).join('\n');
+    const videoLink = videoId
+      ? `https://www.youtube.com/watch?v=${videoId}`
+      : 'Próximamente disponible';
+
+    const message = `Devocional ${dateLabel}
+
+Lecturas de hoy:
+${readingsText}
+
+Aplicación teoterápica con el líder Jimmy Chamorro:
+${videoLink}
+
+Descarga nuestra aplicación y no te pierdas ningún detalle:
+https://ict-devocional.vercel.app`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ text: message });
+      } catch {
+        // usuario canceló el share, no hacer nada
+      }
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(message);
+      setShareFeedback('✓ Copiado al portapapeles');
+    } catch {
+      setShareFeedback('No se pudo copiar');
+    }
+    setTimeout(() => setShareFeedback(null), 2000);
+  }
+
   function toggleReading(idx: number) {
     setReadingChecks((prev) => {
       const next = [...prev];
@@ -379,13 +421,20 @@ export function DevotionalClient({ entry, initialResponse, initialStreak }: Prop
           >
             <ArrowLeft size={18} />
           </button>
-          <div className="flex-1">
+          <div className="min-w-0 flex-1">
             <p className="text-xs font-medium text-blue-200">{planLabel}</p>
             <h1 className="text-lg font-bold text-white">Día {entry.dayNumber}</h1>
           </div>
           <span className="text-sm font-semibold text-blue-200">
             {progress}/{total}
           </span>
+          <button
+            onClick={handleShare}
+            aria-label="Compartir devocional"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/20 text-white"
+          >
+            <Share2 size={16} />
+          </button>
         </div>
         <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/20">
           <motion.div
@@ -404,6 +453,17 @@ export function DevotionalClient({ entry, initialResponse, initialStreak }: Prop
               className="mt-1.5 text-right text-xs text-blue-200"
             >
               {saveStatus === 'saving' ? 'Guardando…' : '✓ Guardado'}
+            </motion.p>
+          )}
+          {shareFeedback && (
+            <motion.p
+              key="share-feedback"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="mt-1.5 text-right text-xs text-blue-200"
+            >
+              {shareFeedback}
             </motion.p>
           )}
         </AnimatePresence>
@@ -453,6 +513,7 @@ export function DevotionalClient({ entry, initialResponse, initialStreak }: Prop
           month={parseInt(entry.date.split('-')[1]!, 10)}
           watched={videoWatched}
           onWatched={() => setVideoWatched(true)}
+          onVideoLoaded={(video) => setVideoId(video.videoId)}
         />
 
         {/* Podcast de la semana */}

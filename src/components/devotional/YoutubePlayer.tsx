@@ -31,6 +31,7 @@ type Props = {
   watched: boolean;
   onWatched: () => void;
   onAvailabilityChange?: (available: boolean) => void;
+  onVideoLoaded?: (video: VideoData) => void;
 };
 
 export function YoutubePlayer({
@@ -39,6 +40,7 @@ export function YoutubePlayer({
   watched,
   onWatched,
   onAvailabilityChange,
+  onVideoLoaded,
 }: Props) {
   const [state, setState] = useState<State>({ status: 'loading' });
   const [completed, setCompleted] = useState(watched);
@@ -55,6 +57,7 @@ export function YoutubePlayer({
         if (data.videoId) {
           setState({ status: 'ready', video: data });
           onAvailabilityChange?.(true);
+          onVideoLoaded?.(data);
         } else {
           setState({ status: 'empty' });
           onAvailabilityChange?.(false);
@@ -64,7 +67,7 @@ export function YoutubePlayer({
         setState({ status: 'empty' });
         onAvailabilityChange?.(false);
       });
-  }, [dayNumber, month, onAvailabilityChange]);
+  }, [dayNumber, month, onAvailabilityChange, onVideoLoaded]);
 
   useEffect(() => {
     if (state.status !== 'ready') return;
