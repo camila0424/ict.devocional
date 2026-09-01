@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { getDaysInMonth, subDays } from 'date-fns';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { refreshStreakOnLoad } from '@/lib/streak-engine';
+import { refreshStreakOnLoad, getStreakDisplayState } from '@/lib/streak-engine';
+import { getMadridNow } from '@/lib/madrid-date';
 import type { ApiResponse } from '@/types/api';
 import type { ProgressData } from '@/hooks/useProgress';
 
@@ -61,13 +62,14 @@ export async function GET(
     }),
   ]);
 
+  const madridNow = getMadridNow();
   const streakState = refreshStreakOnLoad(
     {
       current: rawStreak?.current ?? 0,
       best: rawStreak?.best ?? 0,
       lastCompletedAt: rawStreak?.lastCompletedAt ?? null,
     },
-    new Date(),
+    madridNow,
   );
 
   if (streakState.current !== rawStreak?.current) {
@@ -77,6 +79,14 @@ export async function GET(
       create: { userId: session.user.id, current: streakState.current, best: streakState.best },
     });
   }
+
+  const { state: displayState, frozenDays } = getStreakDisplayState(
+    rawStreak?.lastCompletedAt ?? null,
+    madridNow,
+  );
+  const bestStreakAt = rawStreak?.bestStreakAt ?? null;
+  const bestStreakMonth = bestStreakAt ? new Date(bestStreakAt).getUTCMonth() + 1 : null;
+  const bestStreakYear = bestStreakAt ? new Date(bestStreakAt).getUTCFullYear() : null;
 
   const completedDays = monthProgress.map((p) => new Date(p.date).getUTCDate());
   const completedThisMonth = completedDays.length;
@@ -103,7 +113,14 @@ export async function GET(
       year,
       daysInMonth,
       completedDays,
-      streak: { current: streakState.current, best: streakState.best },
+      streak: {
+        current: streakState.current,
+        best: streakState.best,
+        displayState,
+        frozenDays,
+        bestStreakMonth,
+        bestStreakYear,
+      },
       stats: {
         totalCompleted: allTimeCount,
         completedThisMonth,

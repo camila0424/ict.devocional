@@ -1,16 +1,31 @@
 import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { refreshStreakOnLoad } from '@/lib/streak-engine';
+import { refreshStreakOnLoad, getStreakDisplayState } from '@/lib/streak-engine';
+import { getMadridNow } from '@/lib/madrid-date';
 import { HomeClient } from '@/components/home/HomeClient';
 
 async function getHomeData(userId: string) {
-  const now = new Date();
+  const now = getMadridNow();
   const month = now.getMonth() + 1;
   const year = now.getFullYear();
   const day = now.getDate();
 
-  let streak = { current: 0, best: 0 };
+  let streak: {
+    current: number;
+    best: number;
+    displayState: 'alive' | 'frozen' | 'lost' | 'none';
+    frozenDays: number;
+    bestStreakMonth: number | null;
+    bestStreakYear: number | null;
+  } = {
+    current: 0,
+    best: 0,
+    displayState: 'none',
+    frozenDays: 0,
+    bestStreakMonth: null,
+    bestStreakYear: null,
+  };
   let todayCompleted = false;
   let completedDays: number[] = [];
   let totalCompleted = 0;
@@ -44,15 +59,29 @@ async function getHomeData(userId: string) {
       best: streakRaw?.best ?? 0,
       lastCompletedAt: streakRaw?.lastCompletedAt ?? null,
     };
-    streak = refreshStreakOnLoad(streakState, now);
+    const refreshed = refreshStreakOnLoad(streakState, now);
 
-    if (streak.current !== streakState.current) {
+    if (refreshed.current !== streakState.current) {
       await prisma.streak.upsert({
         where: { userId },
-        update: { current: streak.current },
-        create: { userId, current: streak.current, best: streak.best },
+        update: { current: refreshed.current },
+        create: { userId, current: refreshed.current, best: refreshed.best },
       });
     }
+
+    const { state: displayState, frozenDays } = getStreakDisplayState(
+      streakRaw?.lastCompletedAt ?? null,
+      now,
+    );
+    const bestStreakAt = streakRaw?.bestStreakAt ?? null;
+    streak = {
+      current: refreshed.current,
+      best: refreshed.best,
+      displayState,
+      frozenDays,
+      bestStreakMonth: bestStreakAt ? new Date(bestStreakAt).getUTCMonth() + 1 : null,
+      bestStreakYear: bestStreakAt ? new Date(bestStreakAt).getUTCFullYear() : null,
+    };
 
     todayCompleted = (todayEntry?.responses[0]?.completedAt ?? null) !== null;
     completedDays = progressRows

@@ -2,13 +2,10 @@ import { redirect, notFound } from 'next/navigation';
 import Link from 'next/link';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { getMadridNow } from '@/lib/madrid-date';
 import { DevotionalClient } from '@/components/devotional/DevotionalClient';
 
-async function getEntry(userId: string, dayNumber: number) {
-  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Madrid' }));
-  const month = now.getMonth() + 1;
-  const year = now.getFullYear();
-
+async function getEntry(userId: string, dayNumber: number, month: number, year: number) {
   return prisma.dailyEntry.findFirst({
     where: { plan: { month, year }, dayNumber },
     include: {
@@ -18,10 +15,7 @@ async function getEntry(userId: string, dayNumber: number) {
   });
 }
 
-async function getPlanExists(): Promise<boolean> {
-  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Madrid' }));
-  const month = now.getMonth() + 1;
-  const year = now.getFullYear();
+async function getPlanExists(month: number, year: number): Promise<boolean> {
   const plan = await prisma.devotionalPlan.findUnique({
     where: { month_year: { month, year } },
     select: { id: true },
@@ -34,7 +28,13 @@ async function getStreak(userId: string) {
   return streak?.current ?? 0;
 }
 
-export default async function DevotionalDayPage({ params }: { params: Promise<{ day: string }> }) {
+export default async function DevotionalDayPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ day: string }>;
+  searchParams: Promise<{ month?: string; year?: string }>;
+}) {
   const session = await auth();
   if (!session?.user?.id) redirect('/login');
 
@@ -42,16 +42,25 @@ export default async function DevotionalDayPage({ params }: { params: Promise<{ 
   const dayNumber = parseInt(day, 10);
   if (isNaN(dayNumber) || dayNumber < 1 || dayNumber > 31) notFound();
 
-  const nowSpain = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Madrid' }));
+  const nowSpain = getMadridNow();
   const todaySpain = new Date(nowSpain.getFullYear(), nowSpain.getMonth(), nowSpain.getDate());
 
+  const { month: monthParam, year: yearParam } = await searchParams;
+  const parsedMonth = parseInt(monthParam ?? '', 10);
+  const parsedYear = parseInt(yearParam ?? '', 10);
+  const month =
+    !isNaN(parsedMonth) && parsedMonth >= 1 && parsedMonth <= 12
+      ? parsedMonth
+      : nowSpain.getMonth() + 1;
+  const year = !isNaN(parsedYear) ? parsedYear : nowSpain.getFullYear();
+
   const [entry, initialStreak] = await Promise.all([
-    getEntry(session.user.id, dayNumber),
+    getEntry(session.user.id, dayNumber, month, year),
     getStreak(session.user.id),
   ]);
 
   if (!entry) {
-    const planExists = await getPlanExists();
+    const planExists = await getPlanExists(month, year);
     if (!planExists) {
       return (
         <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 p-6 text-center">
@@ -88,6 +97,10 @@ export default async function DevotionalDayPage({ params }: { params: Promise<{ 
   }
 
   const response = entry.responses[0] ?? null;
+  const canComplete =
+    entryDate.getUTCFullYear() === nowSpain.getFullYear() &&
+    entryDate.getUTCMonth() === nowSpain.getMonth() &&
+    entryDate.getUTCDate() === nowSpain.getDate();
 
   return (
     <DevotionalClient
@@ -98,6 +111,7 @@ export default async function DevotionalDayPage({ params }: { params: Promise<{ 
         readings: entry.readings,
         youtubeVideoId: entry.youtubeVideoId ?? null,
       }}
+      canComplete={canComplete}
       initialResponse={
         response
           ? {

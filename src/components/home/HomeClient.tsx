@@ -3,9 +3,10 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronRight, Trophy, X, PlayCircle } from 'lucide-react';
+import { ChevronRight, X, PlayCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LevelCard } from '@/components/ui/LevelCard';
+import { StreakCard } from '@/components/streak/StreakCard';
 import { getFraseDelDia } from '@/constants/phrases';
 
 type Props = {
@@ -13,7 +14,14 @@ type Props = {
   day: number;
   month: number;
   year: number;
-  streak: { current: number; best: number };
+  streak: {
+    current: number;
+    best: number;
+    displayState: 'alive' | 'frozen' | 'lost' | 'none';
+    frozenDays: number;
+    bestStreakMonth: number | null;
+    bestStreakYear: number | null;
+  };
   todayCompleted: boolean;
   completedDays: number[];
   visionTitle?: string | null;
@@ -86,27 +94,15 @@ export function HomeClient({
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.1, duration: 0.3 }}
-        className="rounded-2xl bg-[var(--color-primary)] p-6 text-white shadow-lg"
-        style={{
-          background: 'linear-gradient(135deg, var(--color-primary-dark), var(--color-primary))',
-        }}
       >
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium text-blue-200">Racha actual</p>
-            <div className="flex items-end gap-1">
-              <span className="text-6xl leading-none font-black">{streak.current}</span>
-              <span className="mb-2 text-lg text-blue-200">días</span>
-            </div>
-            <div className="mt-2 flex items-center gap-1 text-blue-300">
-              <Trophy size={14} />
-              <span className="text-sm">Mejor racha: {streak.best} días</span>
-            </div>
-          </div>
-          <div className="text-5xl" style={{ animation: 'var(--animate-flame)' }}>
-            🔥
-          </div>
-        </div>
+        <StreakCard
+          current={streak.current}
+          best={streak.best}
+          displayState={streak.displayState}
+          frozenDays={streak.frozenDays}
+          bestStreakMonth={streak.bestStreakMonth}
+          bestStreakYear={streak.bestStreakYear}
+        />
       </motion.div>
 
       {/* Nivel card */}

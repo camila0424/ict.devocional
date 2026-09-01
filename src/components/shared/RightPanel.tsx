@@ -17,7 +17,14 @@ export function RightPanel() {
   return (
     <aside className="sticky top-0 hidden h-dvh w-[280px] shrink-0 flex-col gap-4 overflow-y-auto bg-white px-4 py-6 shadow-[-1px_0_0_0_#e2e8f0] md:flex">
       {data ? (
-        <StreakCard current={data.streak.current} best={data.streak.best} />
+        <StreakCard
+          current={data.streak.current}
+          best={data.streak.best}
+          displayState={data.streak.displayState}
+          frozenDays={data.streak.frozenDays}
+          bestStreakMonth={data.streak.bestStreakMonth}
+          bestStreakYear={data.streak.bestStreakYear}
+        />
       ) : (
         <div className="h-32 animate-pulse rounded-2xl bg-slate-100" />
       )}

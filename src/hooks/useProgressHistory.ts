@@ -3,37 +3,26 @@
 import { useReducer, useEffect, useCallback } from 'react';
 import type { ApiResponse } from '@/types/api';
 
-export type ProgressData = {
-  month: number;
-  year: number;
-  daysInMonth: number;
-  completedDays: number[];
-  streak: {
-    current: number;
-    best: number;
-    displayState: 'alive' | 'frozen' | 'lost' | 'none';
-    frozenDays: number;
-    bestStreakMonth: number | null;
-    bestStreakYear: number | null;
-  };
-  stats: {
-    totalCompleted: number;
-    completedThisMonth: number;
-    bestStreak: number;
-    percentageMonth: number;
-  };
-  last7Days: Array<{ dayNumber: number; date: string; completed: boolean }>;
+export type ProgressHistoryData = {
+  months: Array<{
+    month: number;
+    year: number;
+    label: string;
+    totalDays: number;
+    completedDays: number;
+    isCurrent: boolean;
+  }>;
 };
 
 type State = {
-  data: ProgressData | null;
+  data: ProgressHistoryData | null;
   isLoading: boolean;
   error: string | null;
 };
 
 type Action =
   | { type: 'LOADING' }
-  | { type: 'SUCCESS'; data: ProgressData }
+  | { type: 'SUCCESS'; data: ProgressHistoryData }
   | { type: 'ERROR'; error: string };
 
 const INIT: State = { data: null, isLoading: true, error: null };
@@ -51,23 +40,23 @@ function reducer(state: State, action: Action): State {
   }
 }
 
-export function useProgress(yearMonth: string) {
+export function useProgressHistory() {
   const [state, dispatch] = useReducer(reducer, INIT);
 
   const load = useCallback(async () => {
     dispatch({ type: 'LOADING' });
     try {
-      const res = await fetch(`/api/progress/${yearMonth}`);
-      const json = (await res.json()) as ApiResponse<ProgressData>;
+      const res = await fetch('/api/progress/history');
+      const json = (await res.json()) as ApiResponse<ProgressHistoryData>;
       if (!json.success) {
         dispatch({ type: 'ERROR', error: json.error });
         return;
       }
       dispatch({ type: 'SUCCESS', data: json.data });
     } catch {
-      dispatch({ type: 'ERROR', error: 'Error al cargar el progreso' });
+      dispatch({ type: 'ERROR', error: 'Error al cargar el historial' });
     }
-  }, [yearMonth]);
+  }, []);
 
   useEffect(() => {
     load().catch(console.error);

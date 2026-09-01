@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, BookOpen, X, ChevronDown, ChevronUp, Loader2, Share2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { fetchBibleReading } from '@/services/bibleService';
 
 import { cn } from '@/lib/utils';
@@ -64,13 +65,25 @@ function ReadingItem({
   reading,
   checked,
   onCheck,
+  disabled,
 }: {
   reading: Reading;
   checked: boolean;
   onCheck: () => void;
+  disabled?: boolean;
 }) {
   const [status, setStatus] = useState<ReadingItemUIState>('idle');
   const [text, setText] = useState<string | null>(null);
+
+  function handleCheckClick() {
+    if (disabled) {
+      if (!checked) {
+        toast('Puedes leer este devocional, pero solo el de HOY puede marcarse como completado 📅');
+      }
+      return;
+    }
+    onCheck();
+  }
 
   async function toggle() {
     if (status === 'loading') return;
@@ -100,13 +113,14 @@ function ReadingItem({
         {/* iOS-style circular checkbox */}
         <button
           type="button"
-          onClick={onCheck}
+          onClick={handleCheckClick}
           aria-label="Marcar como leída"
           className={cn(
             'flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-colors',
             checked
               ? 'border-green-500 bg-green-500 text-white'
               : 'border-gray-300 bg-white dark:border-gray-600 dark:bg-transparent',
+            disabled && !checked && 'cursor-not-allowed opacity-60',
           )}
         >
           {checked && (
@@ -194,9 +208,10 @@ type Props = {
   entry: EntryProps;
   initialResponse: ResponseState | null;
   initialStreak: number;
+  canComplete: boolean;
 };
 
-export function DevotionalClient({ entry, initialResponse, initialStreak }: Props) {
+export function DevotionalClient({ entry, initialResponse, initialStreak, canComplete }: Props) {
   const router = useRouter();
   const alreadyCompleted = !!initialResponse?.completedAt;
   const entryDate = new Date(entry.date);
@@ -289,7 +304,7 @@ export function DevotionalClient({ entry, initialResponse, initialStreak }: Prop
   const progress = checkedReadings;
 
   useEffect(() => {
-    if (progress === total && !celebrated && !completingRef.current) {
+    if (progress === total && !celebrated && !completingRef.current && canComplete) {
       completingRef.current = true;
       setCelebrated(true);
       setShowCelebration(true);
@@ -309,7 +324,7 @@ export function DevotionalClient({ entry, initialResponse, initialStreak }: Prop
         })
         .catch(() => {});
     }
-  }, [progress, total, celebrated, entry.id, entry.dayNumber]);
+  }, [progress, total, celebrated, entry.id, entry.dayNumber, canComplete]);
 
   async function handleShare() {
     const dateLabel = entryDate.toLocaleDateString('es-ES', {
@@ -470,6 +485,16 @@ https://ict-devocional.vercel.app`;
       </div>
 
       <div className="flex flex-col gap-4 p-4 pb-10">
+        {/* Banner devocional pasado */}
+        {!canComplete && !alreadyCompleted && (
+          <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-800 dark:bg-amber-950/30">
+            <p className="flex-1 text-xs leading-relaxed text-amber-700 dark:text-amber-300">
+              📅 Estás viendo un devocional pasado. Puedes leerlo con calma, pero solo el de hoy
+              puede marcarse como completado — así cuidamos tu racha 🌱
+            </p>
+          </div>
+        )}
+
         {/* Banner Biblia física */}
         {showBibleBanner && (
           <div className="flex items-start gap-3 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 dark:border-blue-800 dark:bg-blue-950/40">
@@ -502,6 +527,7 @@ https://ict-devocional.vercel.app`;
                 reading={r}
                 checked={readingChecks[idx] ?? false}
                 onCheck={() => toggleReading(idx)}
+                disabled={!canComplete}
               />
             ))}
           </div>

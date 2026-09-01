@@ -1,13 +1,10 @@
 import { redirect } from 'next/navigation';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { getMadridNow } from '@/lib/madrid-date';
 import { PlanDayList } from './PlanDayList';
 
-async function getPlanData(userId: string) {
-  const now = new Date();
-  const month = now.getMonth() + 1;
-  const year = now.getFullYear();
-
+async function getPlanData(userId: string, month: number, year: number) {
   const entries = await prisma.dailyEntry.findMany({
     where: { plan: { month, year } },
     include: {
@@ -18,9 +15,6 @@ async function getPlanData(userId: string) {
   });
 
   return {
-    today: now.getDate(),
-    month,
-    year,
     entries: entries.map((e) => ({
       dayNumber: e.dayNumber,
       rawReadings: e.rawReadings as string,
@@ -30,11 +24,29 @@ async function getPlanData(userId: string) {
   };
 }
 
-export default async function PlanPage() {
+export default async function PlanPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ month?: string; year?: string }>;
+}) {
   const session = await auth();
   if (!session?.user?.id) redirect('/login');
 
-  const { entries, today, month, year } = await getPlanData(session.user.id);
+  const now = getMadridNow();
+  const currentMonth = now.getMonth() + 1;
+  const currentYear = now.getFullYear();
+
+  const { month: monthParam, year: yearParam } = await searchParams;
+  const parsedMonth = parseInt(monthParam ?? '', 10);
+  const parsedYear = parseInt(yearParam ?? '', 10);
+  const month =
+    !isNaN(parsedMonth) && parsedMonth >= 1 && parsedMonth <= 12 ? parsedMonth : currentMonth;
+  const year = !isNaN(parsedYear) ? parsedYear : currentYear;
+  const isCurrentMonth = month === currentMonth && year === currentYear;
+
+  const { entries } = await getPlanData(session.user.id, month, year);
+  // Para un mes ya pasado, ningún día es "futuro" — se puede ver todo, solo lectura.
+  const today = isCurrentMonth ? now.getDate() : entries.length;
   const completedCount = entries.filter((e) => e.completed).length;
 
   const rawMonth = new Date(year, month - 1, 1).toLocaleString('es-ES', { month: 'long' });
@@ -59,7 +71,7 @@ export default async function PlanPage() {
         />
       </div>
 
-      <PlanDayList entries={entries} today={today} />
+      <PlanDayList entries={entries} today={today} month={month} year={year} />
     </div>
   );
 }

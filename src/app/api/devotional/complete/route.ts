@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { recalculateStreak } from '@/lib/streak-recalc';
+import { getMadridNow } from '@/lib/madrid-date';
 import type { ApiResponse } from '@/types/api';
 
 const completeSchema = z.object({
@@ -50,6 +51,20 @@ export async function POST(
     return NextResponse.json(
       { success: false, error: 'Día no encontrado', code: 'NOT_FOUND' },
       { status: 404 },
+    );
+  }
+
+  // Solo el devocional de hoy puede marcarse como completado (evita inflar la racha).
+  const entryDate = new Date(Date.UTC(entry.plan.year, entry.plan.month - 1, entry.dayNumber));
+  const todaySpain = getMadridNow();
+  const isToday =
+    entryDate.getUTCFullYear() === todaySpain.getFullYear() &&
+    entryDate.getUTCMonth() === todaySpain.getMonth() &&
+    entryDate.getUTCDate() === todaySpain.getDate();
+  if (!isToday) {
+    return NextResponse.json(
+      { success: false, error: 'Solo puedes completar el devocional de hoy', code: 'NOT_TODAY' },
+      { status: 403 },
     );
   }
 

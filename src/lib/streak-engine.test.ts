@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { computeStreakOnComplete, refreshStreakOnLoad } from './streak-engine';
+import {
+  computeStreakOnComplete,
+  refreshStreakOnLoad,
+  getStreakDisplayState,
+} from './streak-engine';
 
 describe('streak-engine', () => {
   it('inicia en 1 si nunca completó', () => {
@@ -58,5 +62,44 @@ describe('streak-engine', () => {
       new Date('2026-05-05'),
     );
     expect(result.current).toBe(4);
+  });
+
+  it('mantiene racha (congelada) si pasaron 2 días al cargar (gracia)', () => {
+    const result = refreshStreakOnLoad(
+      { current: 4, best: 10, lastCompletedAt: new Date('2026-05-03') },
+      new Date('2026-05-05'),
+    );
+    expect(result.current).toBe(4);
+  });
+
+  it('rompe la racha al cargar si pasaron 3+ días', () => {
+    const result = refreshStreakOnLoad(
+      { current: 4, best: 10, lastCompletedAt: new Date('2026-05-02') },
+      new Date('2026-05-05'),
+    );
+    expect(result.current).toBe(0);
+  });
+
+  it('getStreakDisplayState: alive si completó hoy', () => {
+    const result = getStreakDisplayState(new Date('2026-05-05'), new Date('2026-05-05'));
+    expect(result.state).toBe('alive');
+  });
+
+  it('getStreakDisplayState: frozen con 1-2 días sin completar', () => {
+    expect(getStreakDisplayState(new Date('2026-05-04'), new Date('2026-05-05')).state).toBe(
+      'frozen',
+    );
+    const twoDays = getStreakDisplayState(new Date('2026-05-03'), new Date('2026-05-05'));
+    expect(twoDays.state).toBe('frozen');
+    expect(twoDays.frozenDays).toBe(2);
+  });
+
+  it('getStreakDisplayState: lost al 3er día sin completar', () => {
+    const result = getStreakDisplayState(new Date('2026-05-02'), new Date('2026-05-05'));
+    expect(result.state).toBe('lost');
+  });
+
+  it('getStreakDisplayState: none si nunca completó', () => {
+    expect(getStreakDisplayState(null, new Date('2026-05-05')).state).toBe('none');
   });
 });

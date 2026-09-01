@@ -17,9 +17,12 @@ type Entry = {
 type Props = {
   entries: Entry[];
   today: number;
+  month?: number;
+  year?: number;
 };
 
-export function PlanDayList({ entries, today }: Props) {
+export function PlanDayList({ entries, today, month, year }: Props) {
+  const query = month && year ? `?month=${month}&year=${year}` : '';
   return (
     <ul className="flex flex-col gap-2">
       {entries.map((entry) => {
@@ -89,7 +92,7 @@ export function PlanDayList({ entries, today }: Props) {
                 {card}
               </button>
             ) : (
-              <Link href={`/devotional/${entry.dayNumber}`} className="block">
+              <Link href={`/devotional/${entry.dayNumber}${query}`} className="block">
                 {card}
               </Link>
             )}

@@ -15,6 +15,7 @@ model User {
   passwordHash        String               @map("password_hash")
   avatarUrl           String?              @map("avatar_url")
   timezone            String               @default("Europe/Madrid")
+  isAdmin             Boolean              @default(false) @map("is_admin")
   createdAt           DateTime             @default(now()) @map("created_at")
   updatedAt           DateTime             @updatedAt @map("updated_at")
   responses           DevotionalResponse[]
@@ -124,6 +125,7 @@ model Streak {
   userId          String    @unique @map("user_id")
   current         Int       @default(0)
   best            Int       @default(0)
+  bestStreakAt    DateTime? @map("best_streak_at")
   lastCompletedAt DateTime? @map("last_completed_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
   user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
