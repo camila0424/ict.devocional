@@ -3,6 +3,7 @@ import { TabBar } from '@/components/navigation/TabBar';
 import { Sidebar } from '@/components/navigation/Sidebar';
 import { RightPanel } from '@/components/shared/RightPanel';
 import { InstallBanner } from '@/components/shared/InstallBanner';
+import { IOSInstallBannerClient } from '@/components/shared/IOSInstallBannerClient';
 import { NotificationBannerClient } from '@/components/shared/NotificationBannerClient';
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -13,6 +14,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="bg-background flex min-h-dvh md:bg-[#F8FAFF]">
       <InstallBanner />
+      <IOSInstallBannerClient />
       <NotificationBannerClient />
       <Sidebar userName={userName} userInitial={userInitial} />
       <div className="flex flex-1 justify-center">

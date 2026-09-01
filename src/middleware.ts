@@ -2,6 +2,6 @@ export { auth as middleware } from '@/lib/auth';
 
 export const config = {
   matcher: [
-    '/((?!api/auth|login|register|_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|icons).*)',
+    '/((?!api/auth|login|register|_next/static|_next/image|favicon.ico|manifest.webmanifest|sw.js|sw-ict.js|icons).*)',
   ],
 };

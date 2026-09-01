@@ -21,9 +21,13 @@ self.addEventListener('push', function(event) {
     body: data.body ?? '',
     icon: '/icons/icon-192.png',
     badge: '/icons/icon-192.png',
-    vibrate: [200, 100, 200],
+    vibrate: data.vibrate ?? [300, 150, 300, 150, 300],
     data: { url: data.url ?? '/' },
     requireInteraction: data.requireInteraction ?? false,
+    tag: data.tag ?? 'ict-devocional',
+    renotify: data.renotify ?? true,
+    silent: data.silent ?? false,
+    actions: data.actions ?? [],
   };
 
   event.waitUntil(

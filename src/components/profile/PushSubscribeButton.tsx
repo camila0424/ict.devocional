@@ -2,12 +2,26 @@
 
 import { Bell, BellOff, Loader2 } from 'lucide-react';
 import { usePushSubscription } from '@/hooks/usePushSubscription';
+import { useIOSInstallStatus } from '@/hooks/useIOSInstallStatus';
 
 export function PushSubscribeButton() {
   const { status, errorMessage, subscribe, unsubscribe } = usePushSubscription();
+  const { isIOS, isStandalone } = useIOSInstallStatus();
 
   if (typeof window === 'undefined') return null;
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) return null;
+
+  if (isIOS && !isStandalone) {
+    return (
+      <div className="flex items-center gap-3 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm font-medium text-blue-700 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-300">
+        <Bell size={18} className="shrink-0" />
+        <span>
+          Primero agrega ICT Devocional a tu pantalla de inicio (Compartir → &quot;Añadir a pantalla
+          de inicio&quot;) para poder activar las notificaciones.
+        </span>
+      </div>
+    );
+  }
 
   if (status === 'denied') {
     return (

@@ -17,7 +17,7 @@ export function useTotalDays() {
       try {
         const res = await fetch(`/api/progress/${currentYearMonth()}`);
         const json = await res.json();
-        if (!cancelled) setTotalDays(json.success ? (json.data.stats.totalCompleted as number) : 0);
+        if (!cancelled) setTotalDays(json.success ? (json.data.stats.levelDays as number) : 0);
       } catch {
         if (!cancelled) setTotalDays(0);
       }

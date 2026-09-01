@@ -3,6 +3,7 @@ import { getDaysInMonth, subDays } from 'date-fns';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { refreshStreakOnLoad, getStreakDisplayState } from '@/lib/streak-engine';
+import { shouldResetLevel } from '@/lib/level-engine';
 import { getMadridNow } from '@/lib/madrid-date';
 import type { ApiResponse } from '@/types/api';
 import type { ProgressData } from '@/hooks/useProgress';
@@ -88,6 +89,25 @@ export async function GET(
   const bestStreakMonth = bestStreakAt ? new Date(bestStreakAt).getUTCMonth() + 1 : null;
   const bestStreakYear = bestStreakAt ? new Date(bestStreakAt).getUTCFullYear() : null;
 
+  const needsLevelReset = shouldResetLevel(
+    rawStreak?.lastCompletedAt ?? null,
+    rawStreak?.levelResetAt ?? null,
+    madridNow,
+  );
+  if (needsLevelReset) {
+    await prisma.streak.upsert({
+      where: { userId: session.user.id },
+      update: { levelResetAt: madridNow },
+      create: { userId: session.user.id, levelResetAt: madridNow },
+    });
+  }
+  const levelResetAt = needsLevelReset ? madridNow : (rawStreak?.levelResetAt ?? null);
+  const levelDays = levelResetAt
+    ? await prisma.userProgress.count({
+        where: { userId: session.user.id, completed: true, date: { gte: levelResetAt } },
+      })
+    : allTimeCount;
+
   const completedDays = monthProgress.map((p) => new Date(p.date).getUTCDate());
   const completedThisMonth = completedDays.length;
   const percentageMonth = Math.round((completedThisMonth / daysInMonth) * 100);
@@ -126,6 +146,7 @@ export async function GET(
         completedThisMonth,
         bestStreak: streakState.best,
         percentageMonth,
+        levelDays,
       },
       last7Days,
     },

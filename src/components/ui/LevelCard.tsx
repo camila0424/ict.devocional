@@ -38,7 +38,7 @@ export function LevelCard() {
           </div>
         </div>
         <div className="text-right">
-          <p className="text-muted text-xs">Días totales</p>
+          <p className="text-muted text-xs">Días de nivel</p>
           <p className="text-2xl font-black">{totalDays}</p>
         </div>
       </div>

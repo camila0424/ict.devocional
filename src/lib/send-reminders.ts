@@ -2,6 +2,12 @@ import webpush from 'web-push';
 import { prisma } from '@/lib/prisma';
 import { getRecordatorio, getFraseDelDia } from '@/constants/phrases';
 
+const CUSTOM_TIME_WINDOW_MINUTES = 8;
+
+function dateKeyOf(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 export async function sendReminders() {
   webpush.setVapidDetails(
     process.env.VAPID_SUBJECT!,
@@ -11,6 +17,7 @@ export async function sendReminders() {
 
   const nowSpain = new Date(new Date().toLocaleString('en-US', { timeZone: 'Europe/Madrid' }));
   const todaySpain = new Date(nowSpain.getFullYear(), nowSpain.getMonth(), nowSpain.getDate());
+  const dateKey = dateKeyOf(nowSpain);
 
   const hourSpain = nowSpain.getHours();
   const turno: 'mañana' | 'tarde' | 'noche' =
@@ -23,6 +30,14 @@ export async function sendReminders() {
     return reminderHour >= 17 || reminderHour < 4; // noche
   }
 
+  // True if `nowSpain` falls within CUSTOM_TIME_WINDOW_MINUTES of the user's exact chosen time.
+  function matchesExactTime(hour: number, minute: number): boolean {
+    const target = new Date(nowSpain);
+    target.setHours(hour, minute, 0, 0);
+    const diffMs = Math.abs(nowSpain.getTime() - target.getTime());
+    return diffMs <= CUSTOM_TIME_WINDOW_MINUTES * 60 * 1000;
+  }
+
   const todayEntry = await prisma.dailyEntry.findFirst({
     where: { date: todaySpain },
     select: { id: true },
@@ -33,32 +48,52 @@ export async function sendReminders() {
     include: { user: { include: { reminder: true } } },
   });
 
-  // Only notify users whose reminder is enabled (or unset) and whose preferred time
-  // falls in the current turno so each user receives at most one notification per day.
-  const eligible = subscriptions.filter((s) => {
-    const r = s.user.reminder;
-    if (r === null) return turno === 'mañana'; // default: morning if no preference set
-    if (!r.enabled) return false;
-    return matchesTurno(r.hour);
+  const alreadySent = await prisma.notificationLog.findMany({
+    where: { dateKey, subscriptionId: { in: subscriptions.map((s) => s.id) } },
+    select: { subscriptionId: true, slot: true },
   });
+  const sentSet = new Set(alreadySent.map((n) => `${n.subscriptionId}:${n.slot}`));
+
+  // Recordatorio ligado a los cron jobs (mañana/tarde/noche), como antes — pero deduplicado
+  // para que no se repita si más de un cron cae en la misma ventana el mismo día.
+  const turnoEligible = subscriptions.filter((s) => {
+    const r = s.user.reminder;
+    const isElegible = r === null ? turno === 'mañana' : r.enabled && matchesTurno(r.hour);
+    return isElegible && !sentSet.has(`${s.id}:${turno}`);
+  });
+
+  // Recordatorio a la hora exacta que el usuario eligió (además del de turno, no en su lugar).
+  const customEligible = subscriptions.filter((s) => {
+    const r = s.user.reminder;
+    if (!r?.enabled) return false;
+    return matchesExactTime(r.hour, r.minute) && !sentSet.has(`${s.id}:custom`);
+  });
+
+  const toNotify = [
+    ...turnoEligible.map((s) => ({ sub: s, slot: turno as string })),
+    ...customEligible.map((s) => ({ sub: s, slot: 'custom' })),
+  ];
 
   const completedToday = await prisma.userProgress.findMany({
     where: {
       date: todaySpain,
       completed: true,
-      userId: { in: eligible.map((s) => s.userId) },
+      userId: { in: toNotify.map(({ sub }) => sub.userId) },
     },
     select: { userId: true },
   });
 
   const completedSet = new Set(completedToday.map((p) => p.userId));
-  const pending = eligible.filter((s) => !completedSet.has(s.userId));
-  const completed = eligible.filter((s) => completedSet.has(s.userId));
-
   const recordatorio = getRecordatorio(turno);
   const fraseDelDia = getFraseDelDia(nowSpain);
 
-  const send = (sub: (typeof subscriptions)[0], title: string, body: string, url: string) =>
+  const send = (
+    sub: (typeof subscriptions)[0],
+    slot: string,
+    title: string,
+    body: string,
+    url: string,
+  ) =>
     webpush
       .sendNotification(
         { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
@@ -67,11 +102,22 @@ export async function sendReminders() {
           body,
           url,
           requireInteraction: true,
-          vibrate: [200, 100, 200],
+          vibrate: [300, 150, 300, 150, 300],
           badge: '/icons/icon-192.png',
           icon: '/icons/icon-192.png',
+          tag: `ict-${slot}`,
+          renotify: true,
+          silent: false,
+          actions: [{ action: 'open', title: 'Abrir devocional' }],
         }),
         { urgency: 'high' },
+      )
+      .then(() =>
+        prisma.notificationLog.upsert({
+          where: { subscriptionId_slot_dateKey: { subscriptionId: sub.id, slot, dateKey } },
+          update: {},
+          create: { subscriptionId: sub.id, slot, dateKey },
+        }),
       )
       .catch(async (err) => {
         if (err.statusCode === 410 || err.statusCode === 404) {
@@ -80,10 +126,14 @@ export async function sendReminders() {
         throw err;
       });
 
-  const results = await Promise.allSettled([
-    ...pending.map((s) => send(s, 'ICT Devocional 🙏', recordatorio, devotionalUrl)),
-    ...completed.map((s) => send(s, 'ICT Devocional ✨', fraseDelDia, '/')),
-  ]);
+  const results = await Promise.allSettled(
+    toNotify.map(({ sub, slot }) => {
+      const isCompleted = completedSet.has(sub.userId);
+      return isCompleted
+        ? send(sub, slot, 'ICT Devocional ✨', fraseDelDia, '/')
+        : send(sub, slot, 'ICT Devocional 🙏', recordatorio, devotionalUrl);
+    }),
+  );
 
   return {
     sent: results.filter((r) => r.status === 'fulfilled').length,

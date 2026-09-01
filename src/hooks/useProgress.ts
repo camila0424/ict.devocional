@@ -21,6 +21,7 @@ export type ProgressData = {
     completedThisMonth: number;
     bestStreak: number;
     percentageMonth: number;
+    levelDays: number;
   };
   last7Days: Array<{ dayNumber: number; date: string; completed: boolean }>;
 };

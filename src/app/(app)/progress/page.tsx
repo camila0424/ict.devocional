@@ -108,6 +108,24 @@ export default function ProgressPage() {
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.08, duration: 0.3 }}
+        className="rounded-2xl border border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-950/30"
+      >
+        <div className="mb-2 flex items-center gap-2">
+          <span className="text-base">🌱</span>
+          <h2 className="font-bold text-green-900 dark:text-green-200">El devocional es diario</h2>
+        </div>
+        <p className="text-sm leading-relaxed text-green-800/90 dark:text-green-300/90">
+          No es una actividad más: es el punto de encuentro diario con Dios. Saltarte un día no es
+          un descanso inofensivo — interrumpe el crecimiento espiritual que vienes construyendo y te
+          retrocede en tu proceso y en tu cercanía con Él. La constancia, día a día, es lo que
+          sostiene y hace crecer esa relación.
+        </p>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1, duration: 0.3 }}
         className="grid grid-cols-2 gap-3"
       >

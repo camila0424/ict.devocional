@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { motion, AnimatePresence } from 'motion/react';
 import { usePushSubscription } from '@/hooks/usePushSubscription';
+import { useIOSInstallStatus } from '@/hooks/useIOSInstallStatus';
 
 function todayKey() {
   return new Date().toISOString().slice(0, 10); // YYYY-MM-DD
@@ -27,10 +28,12 @@ function shouldShow(): boolean {
 export function NotificationBanner() {
   const { status } = useSession();
   const { subscribe } = usePushSubscription();
+  const { isIOS, isStandalone } = useIOSInstallStatus();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     if (status !== 'authenticated') return;
+    if (isIOS && !isStandalone) return; // el banner de iOS ya explica cómo instalarla primero
     const id = setTimeout(() => {
       // If permission already granted but not subscribed, re-subscribe silently
       if (
@@ -49,7 +52,7 @@ export function NotificationBanner() {
       }
     }, 2000);
     return () => clearTimeout(id);
-  }, [status, subscribe]);
+  }, [status, subscribe, isIOS, isStandalone]);
 
   function handleDismiss() {
     setVisible(false);
