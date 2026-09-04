@@ -8,7 +8,7 @@ import { Strings } from '@/constants/strings';
 const BRAND = '#1800AD';
 const SESSION_KEY = 'ict-splash-shown';
 /** Tiempo total en pantalla antes de empezar a desvanecer (ms). */
-const HOLD_MS = 2600;
+const HOLD_MS = 1500;
 
 const subscribe = () => () => {};
 const wasShown = () => {
@@ -70,7 +70,7 @@ export function SplashScreen() {
             paddingBottom: 'env(safe-area-inset-bottom)',
           }}
           initial={{ opacity: 1 }}
-          exit={{ opacity: 0, transition: { duration: 0.55, ease: 'easeInOut' } }}
+          exit={{ opacity: 0, transition: { duration: 0.4, ease: 'easeInOut' } }}
         >
           {/* Halo suave para dar profundidad sin romper el color unificado */}
           <div
@@ -81,17 +81,12 @@ export function SplashScreen() {
             }}
           />
 
-          {/* Logo blanco: se revela de izquierda a derecha */}
+          {/* Logo blanco: ya viene visible desde el ícono nativo, sin
+              reaparecer — evita el parpadeo/hueco al entregar el control a React. */}
           {!logoOk && (
-            <motion.span
-              className="relative text-5xl font-bold tracking-tight text-white"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1, transition: { duration: 0.4 } }}
-            >
-              ICT
-            </motion.span>
+            <span className="relative text-5xl font-bold tracking-tight text-white">ICT</span>
           )}
-          <motion.img
+          <img
             src="/splash/ict-logo-white.png"
             alt={Strings.app.name}
             width={1005}
@@ -100,23 +95,13 @@ export function SplashScreen() {
             onError={() => setLogoOk(false)}
             className="relative h-auto w-[70vw] max-w-75 select-none"
             draggable={false}
-            initial={reduceMotion ? { opacity: 0 } : { clipPath: 'inset(0 100% 0 0)', opacity: 1 }}
-            animate={
-              reduceMotion
-                ? { opacity: 1, transition: { duration: 0.4 } }
-                : {
-                    clipPath: 'inset(0 0% 0 0)',
-                    opacity: 1,
-                    transition: { duration: 0.95, ease: [0.22, 1, 0.36, 1], delay: 0.15 },
-                  }
-            }
           />
 
           {/* Saludo de bienvenida */}
           <motion.p
             className="relative mt-5 text-center text-[15px] font-medium tracking-wide text-white/80"
             initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0, transition: { delay: 1.15, duration: 0.5 } }}
+            animate={{ opacity: 1, y: 0, transition: { delay: 0.35, duration: 0.4 } }}
           >
             {Strings.app.tagline}
           </motion.p>
@@ -135,17 +120,17 @@ export function SplashScreen() {
             initial={{ opacity: 0, y: 48, scale: 0.85 }}
             animate={
               reduceMotion
-                ? { opacity: 1, y: 0, scale: 1, transition: { delay: 0.9, duration: 0.4 } }
+                ? { opacity: 1, y: 0, scale: 1, transition: { delay: 0.1, duration: 0.3 } }
                 : {
                     opacity: 1,
                     y: 0,
                     scale: 1,
                     rotate: [0, -6, 5, -4, 3, 0],
                     transition: {
-                      delay: 0.85,
-                      duration: 0.9,
+                      delay: 0.05,
+                      duration: 0.55,
                       ease: 'easeOut',
-                      rotate: { delay: 1.5, duration: 1.1, ease: 'easeInOut' },
+                      rotate: { delay: 0.55, duration: 0.7, ease: 'easeInOut' },
                     },
                   }
             }
