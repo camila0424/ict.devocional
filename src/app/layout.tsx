@@ -4,6 +4,7 @@ import { Toaster } from 'sonner';
 import { Inter } from 'next/font/google';
 import { Providers } from '@/components/shared/Providers';
 import { ServiceWorkerRegister } from '@/components/shared/ServiceWorkerRegister';
+import { SplashScreen } from '@/components/shared/SplashScreen';
 import { Strings } from '@/constants/strings';
 import './globals.css';
 
@@ -68,6 +69,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="bg-background text-foreground min-h-dvh antialiased">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <Providers>{children}</Providers>
+          <SplashScreen />
           <Toaster position="top-center" richColors />
         </ThemeProvider>
         <ServiceWorkerRegister />
