@@ -5,7 +5,6 @@ import { Inter } from 'next/font/google';
 import { Providers } from '@/components/shared/Providers';
 import { ServiceWorkerRegister } from '@/components/shared/ServiceWorkerRegister';
 import { SplashScreen } from '@/components/shared/SplashScreen';
-import { appleStartupImages } from '@/constants/apple-splash';
 import { Strings } from '@/constants/strings';
 import './globals.css';
 
@@ -19,7 +18,6 @@ export const metadata: Metadata = {
     capable: true,
     statusBarStyle: 'black-translucent',
     title: 'ICT',
-    startupImage: appleStartupImages,
   },
   formatDetection: { telephone: false },
   icons: {
