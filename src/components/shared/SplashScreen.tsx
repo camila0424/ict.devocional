@@ -43,6 +43,20 @@ export function SplashScreen() {
 
   const visible = !alreadyShown && !done;
 
+  // Mientras el splash cubre la pantalla, la barra de estado (Android) usa el
+  // mismo azul de marca: transición sin franjas de otro color.
+  useEffect(() => {
+    if (!visible) return;
+    const meta = document.createElement('meta');
+    meta.name = 'theme-color';
+    meta.setAttribute('data-splash', '');
+    meta.content = BRAND;
+    document.head.appendChild(meta);
+    return () => {
+      meta.remove();
+    };
+  }, [visible]);
+
   return (
     <AnimatePresence>
       {visible && (
