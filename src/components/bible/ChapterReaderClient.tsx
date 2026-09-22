@@ -290,131 +290,116 @@ export function ChapterReaderClient({
       {/* Bottom sheet */}
       <AnimatePresence>
         {hasSelection && (
-          <>
-            <motion.div
-              key="backdrop"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={closeSheet}
-              className="fixed inset-0 z-[60] bg-black/50"
-            />
-            <motion.div
-              key="sheet"
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-              className="bg-surface fixed inset-x-0 bottom-0 z-[70] rounded-t-3xl px-5 pt-4 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] shadow-2xl"
-            >
-              <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-gray-300 dark:bg-gray-700" />
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-base font-bold">
-                  {bookName} {chapterIndex + 1}:{selectionLabel}
-                </h2>
-                <button
-                  type="button"
-                  onClick={closeSheet}
-                  aria-label="Cerrar"
-                  className="text-muted"
-                >
-                  <X size={20} />
-                </button>
-              </div>
+          <motion.div
+            key="sheet"
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+            className="bg-surface fixed inset-x-0 bottom-0 z-[70] rounded-t-3xl px-5 pt-4 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] shadow-2xl"
+          >
+            <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-gray-300 dark:bg-gray-700" />
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-base font-bold">
+                {bookName} {chapterIndex + 1}:{selectionLabel}
+              </h2>
+              <button type="button" onClick={closeSheet} aria-label="Cerrar" className="text-muted">
+                <X size={20} />
+              </button>
+            </div>
 
-              {sheetView === 'actions' ? (
-                <>
-                  <div className="mb-4 flex items-center justify-center gap-4">
-                    {HIGHLIGHT_COLORS.map((color) => (
-                      <button
-                        key={color}
-                        type="button"
-                        aria-label="Resaltar"
-                        className="h-8 w-8 rounded-full border border-black/5"
-                        style={{ backgroundColor: color }}
-                      />
-                    ))}
-                  </div>
-                  <div className="grid grid-cols-4 gap-2">
+            {sheetView === 'actions' ? (
+              <>
+                <div className="mb-4 flex items-center justify-center gap-4">
+                  {HIGHLIGHT_COLORS.map((color) => (
                     <button
+                      key={color}
                       type="button"
-                      onClick={toggleSaved}
-                      disabled={togglingSave}
-                      className="flex flex-col items-center gap-1.5 rounded-2xl py-3 disabled:opacity-50"
-                    >
-                      <Heart
-                        size={22}
-                        className={
-                          allSelectedSaved
-                            ? 'fill-[var(--color-primary)] text-[var(--color-primary)]'
-                            : 'text-muted'
-                        }
-                      />
-                      <span className="text-xs font-medium">Guardar</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => isSingleSelection && setSheetView('note')}
-                      disabled={!isSingleSelection}
-                      className="flex flex-col items-center gap-1.5 rounded-2xl py-3 disabled:opacity-30"
-                    >
-                      <NotebookPen size={22} className="text-muted" />
-                      <span className="text-xs font-medium">Nota</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={copyVerse}
-                      className="flex flex-col items-center gap-1.5 rounded-2xl py-3"
-                    >
-                      <Copy size={22} className="text-muted" />
-                      <span className="text-xs font-medium">Copiar</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={goToImage}
-                      className="flex flex-col items-center gap-1.5 rounded-2xl py-3"
-                    >
-                      <ImageIcon size={22} className="text-muted" />
-                      <span className="text-xs font-medium">Imagen</span>
-                    </button>
-                  </div>
-                  {!isSingleSelection && (
-                    <p className="text-muted mt-3 text-center text-xs">
-                      Selecciona un solo versículo para agregar una nota
-                    </p>
-                  )}
-                </>
-              ) : (
-                <div className="flex flex-col gap-3">
-                  <textarea
-                    value={noteDraft}
-                    onChange={(e) => setNoteDraft(e.target.value)}
-                    placeholder="Escribe tu nota..."
-                    rows={5}
-                    autoFocus
-                    className="bg-background border-border placeholder:text-muted focus:border-primary focus:ring-primary-light w-full resize-none rounded-xl border p-3 text-sm outline-none focus:ring-2"
-                  />
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setSheetView('actions')}
-                      className="border-border flex-1 rounded-2xl border py-3 text-sm font-semibold"
-                    >
-                      Atrás
-                    </button>
-                    <button
-                      type="button"
-                      onClick={saveNote}
-                      disabled={savingNote || !noteDraft.trim()}
-                      className="bg-primary flex-1 rounded-2xl py-3 text-sm font-semibold text-white disabled:opacity-50"
-                    >
-                      {savingNote ? 'Guardando…' : 'Guardar nota'}
-                    </button>
-                  </div>
+                      aria-label="Resaltar"
+                      className="h-8 w-8 rounded-full border border-black/5"
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
                 </div>
-              )}
-            </motion.div>
-          </>
+                <div className="grid grid-cols-4 gap-2">
+                  <button
+                    type="button"
+                    onClick={toggleSaved}
+                    disabled={togglingSave}
+                    className="flex flex-col items-center gap-1.5 rounded-2xl py-3 disabled:opacity-50"
+                  >
+                    <Heart
+                      size={22}
+                      className={
+                        allSelectedSaved
+                          ? 'fill-[var(--color-primary)] text-[var(--color-primary)]'
+                          : 'text-muted'
+                      }
+                    />
+                    <span className="text-xs font-medium">Guardar</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => isSingleSelection && setSheetView('note')}
+                    disabled={!isSingleSelection}
+                    className="flex flex-col items-center gap-1.5 rounded-2xl py-3 disabled:opacity-30"
+                  >
+                    <NotebookPen size={22} className="text-muted" />
+                    <span className="text-xs font-medium">Nota</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={copyVerse}
+                    className="flex flex-col items-center gap-1.5 rounded-2xl py-3"
+                  >
+                    <Copy size={22} className="text-muted" />
+                    <span className="text-xs font-medium">Copiar</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={goToImage}
+                    className="flex flex-col items-center gap-1.5 rounded-2xl py-3"
+                  >
+                    <ImageIcon size={22} className="text-muted" />
+                    <span className="text-xs font-medium">Imagen</span>
+                  </button>
+                </div>
+                {!isSingleSelection && (
+                  <p className="text-muted mt-3 text-center text-xs">
+                    Selecciona un solo versículo para agregar una nota
+                  </p>
+                )}
+              </>
+            ) : (
+              <div className="flex flex-col gap-3">
+                <textarea
+                  value={noteDraft}
+                  onChange={(e) => setNoteDraft(e.target.value)}
+                  placeholder="Escribe tu nota..."
+                  rows={5}
+                  autoFocus
+                  className="bg-background border-border placeholder:text-muted focus:border-primary focus:ring-primary-light w-full resize-none rounded-xl border p-3 text-sm outline-none focus:ring-2"
+                />
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSheetView('actions')}
+                    className="border-border flex-1 rounded-2xl border py-3 text-sm font-semibold"
+                  >
+                    Atrás
+                  </button>
+                  <button
+                    type="button"
+                    onClick={saveNote}
+                    disabled={savingNote || !noteDraft.trim()}
+                    className="bg-primary flex-1 rounded-2xl py-3 text-sm font-semibold text-white disabled:opacity-50"
+                  >
+                    {savingNote ? 'Guardando…' : 'Guardar nota'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

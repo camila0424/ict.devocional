@@ -158,7 +158,7 @@ export function VerseImageClient({ bookName, chapter, verseLabel, version, verse
                 crossOrigin="anonymous"
                 className="absolute inset-0 h-full w-full object-cover"
               />
-              <div className="absolute inset-0 bg-black/45" />
+              <div className="absolute inset-0" style={{ backgroundColor: 'rgba(0,0,0,0.45)' }} />
               <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
                 <p
                   className="text-2xl leading-snug font-bold text-white"
@@ -167,13 +167,19 @@ export function VerseImageClient({ bookName, chapter, verseLabel, version, verse
                   {verseText}
                 </p>
                 <p
-                  className="mt-4 text-sm text-white/90"
-                  style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}
+                  className="mt-4 text-sm"
+                  style={{
+                    color: 'rgba(255,255,255,0.9)',
+                    textShadow: '0 1px 4px rgba(0,0,0,0.5)',
+                  }}
                 >
                   {reference}
                 </p>
               </div>
-              <div className="absolute right-3 bottom-3 text-[11px] text-white/70">
+              <div
+                className="absolute right-3 bottom-3 text-[11px]"
+                style={{ color: 'rgba(255,255,255,0.7)' }}
+              >
                 ICT Devocional
               </div>
             </div>
