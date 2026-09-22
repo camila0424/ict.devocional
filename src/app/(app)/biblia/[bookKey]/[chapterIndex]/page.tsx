@@ -44,12 +44,20 @@ export default async function BibleChapterPage({
     }),
     prisma.verseNote.findMany({
       where: { userId: session.user.id, bookKey, chapter, versionKey: bibleVersion },
-      select: { verse: true, noteText: true },
+      select: { id: true, verse: true, noteText: true, color: true },
+      orderBy: { createdAt: 'asc' },
     }),
   ]);
 
   const savedMap = Object.fromEntries(savedVerses.map((v) => [v.verse, v.id]));
-  const notesMap = Object.fromEntries(notes.map((n) => [n.verse, n.noteText]));
+  const notesMap: Record<number, { id: string; noteText: string; color: string }[]> = {};
+  for (const note of notes) {
+    (notesMap[note.verse] ??= []).push({
+      id: note.id,
+      noteText: note.noteText,
+      color: note.color,
+    });
+  }
 
   return (
     <ChapterReaderClient

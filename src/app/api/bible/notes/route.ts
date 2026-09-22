@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { PASTEL_COLORS } from '@/lib/note-colors';
 import type { ApiResponse } from '@/types/api';
 import type { VerseNote } from '@prisma/client';
 
@@ -11,6 +12,7 @@ const noteSchema = z.object({
   verse: z.number().int().positive(),
   versionKey: z.string().min(1),
   noteText: z.string().min(1),
+  color: z.enum(PASTEL_COLORS).default(PASTEL_COLORS[0]),
 });
 
 export async function GET(request: Request): Promise<NextResponse<ApiResponse<VerseNote[]>>> {
@@ -51,15 +53,11 @@ export async function POST(request: Request): Promise<NextResponse<ApiResponse<V
     );
   }
 
-  const { bookKey, chapter, verse, versionKey, noteText } = parsed.data;
+  const { bookKey, chapter, verse, versionKey, noteText, color } = parsed.data;
   const userId = session.user.id;
 
-  const note = await prisma.verseNote.upsert({
-    where: {
-      userId_bookKey_chapter_verse_versionKey: { userId, bookKey, chapter, verse, versionKey },
-    },
-    update: { noteText },
-    create: { userId, bookKey, chapter, verse, versionKey, noteText },
+  const note = await prisma.verseNote.create({
+    data: { userId, bookKey, chapter, verse, versionKey, noteText, color },
   });
 
   return NextResponse.json({ success: true, data: note }, { status: 201 });

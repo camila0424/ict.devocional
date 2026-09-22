@@ -3,10 +3,17 @@
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { Playfair_Display } from 'next/font/google';
 import { toast } from 'sonner';
 import { ArrowLeft, ImagePlus, Share2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { BibleVersion } from '@/lib/bible-reader';
+
+const verseFont = Playfair_Display({
+  subsets: ['latin'],
+  weight: ['600', '700'],
+  style: ['italic'],
+});
 
 type Props = {
   bookName: string;
@@ -97,6 +104,7 @@ export function VerseImageClient({ bookName, chapter, verseLabel, version, verse
     setSharing(true);
     try {
       await waitForPreviewImage();
+      await document.fonts.ready;
 
       const html2canvas = (await import('html2canvas')).default;
       const node = document.getElementById('verse-image-preview');
@@ -174,7 +182,7 @@ export function VerseImageClient({ bookName, chapter, verseLabel, version, verse
                 style={{ padding: verseTextStyle.padding }}
               >
                 <p
-                  className="leading-snug font-bold text-white"
+                  className={cn(verseFont.className, 'leading-snug font-semibold text-white')}
                   style={{
                     fontSize: verseTextStyle.fontSize,
                     textShadow: '0 2px 8px rgba(0,0,0,0.5)',

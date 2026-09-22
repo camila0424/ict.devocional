@@ -160,3 +160,39 @@ export function getVerseCount(
 ): number {
   return getChapter(bookKey, chapterIndex, version).length;
 }
+
+export interface BibleSearchResult {
+  bookKey: string;
+  bookName: string;
+  chapterIndex: number;
+  verseNumber: number;
+  text: string;
+}
+
+export function searchBible(query: string, version: BibleVersion, limit = 50): BibleSearchResult[] {
+  const normalized = query.trim().toLowerCase();
+  if (normalized.length < 2) return [];
+
+  const results: BibleSearchResult[] = [];
+
+  for (const key of CANONICAL_KEYS) {
+    const book = loadBook(key, version);
+    for (let chapterIndex = 0; chapterIndex < book.length; chapterIndex++) {
+      const verses = book[chapterIndex] ?? [];
+      for (let i = 0; i < verses.length; i++) {
+        const text = verses[i];
+        if (!text || !text.toLowerCase().includes(normalized)) continue;
+        results.push({
+          bookKey: key,
+          bookName: BOOK_NAMES_ES[key]!,
+          chapterIndex,
+          verseNumber: i + 1,
+          text,
+        });
+        if (results.length >= limit) return results;
+      }
+    }
+  }
+
+  return results;
+}

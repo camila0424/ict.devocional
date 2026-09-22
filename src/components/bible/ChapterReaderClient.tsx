@@ -7,21 +7,26 @@ import { toast } from 'sonner';
 import {
   ArrowLeft,
   Search,
-  MoreHorizontal,
+  Share2,
   Heart,
   NotebookPen,
   Copy,
   Image as ImageIcon,
   ChevronLeft,
   ChevronRight,
+  Trash2,
+  Plus,
   X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatVerseParam } from '@/lib/bible-verse-range';
+import { PASTEL_COLORS } from '@/lib/note-colors';
 import { VersionSwitcher } from '@/components/bible/VersionSwitcher';
 import type { BibleVersion } from '@/lib/bible-reader';
 import type { ApiResponse } from '@/types/api';
 import type { SavedVerse, VerseNote } from '@prisma/client';
+
+type VerseNoteEntry = { id: string; noteText: string; color: string };
 
 type Props = {
   bookKey: string;
@@ -31,11 +36,9 @@ type Props = {
   verses: string[];
   version: BibleVersion;
   savedMap: Record<number, string>;
-  notesMap: Record<number, string>;
+  notesMap: Record<number, VerseNoteEntry[]>;
   initialVerses: number[];
 };
-
-const HIGHLIGHT_COLORS = ['#facc15', '#4ade80', '#60a5fa'];
 
 export function ChapterReaderClient({
   bookKey,
@@ -52,15 +55,13 @@ export function ChapterReaderClient({
   const chapterTitle = `${bookName} ${chapterIndex + 1}`;
 
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>(initialVerses);
-  const [sheetView, setSheetView] = useState<'actions' | 'note'>('actions');
+  const [sheetView, setSheetView] = useState<'actions' | 'note' | 'view-notes'>('actions');
   const [savedMap, setSavedMap] = useState(initialSavedMap);
   const [notesMap, setNotesMap] = useState(initialNotesMap);
-  const [noteDraft, setNoteDraft] = useState(() =>
-    initialVerses.length === 1 && initialVerses[0] !== undefined
-      ? (initialNotesMap[initialVerses[0]] ?? '')
-      : '',
-  );
+  const [noteDraft, setNoteDraft] = useState('');
+  const [noteColor, setNoteColor] = useState<string>(PASTEL_COLORS[0]);
   const [savingNote, setSavingNote] = useState(false);
+  const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
   const [togglingSave, setTogglingSave] = useState(false);
   const didScrollToInitial = useRef(false);
 
@@ -71,6 +72,9 @@ export function ChapterReaderClient({
   const isSingleSelection = sortedSelected.length === 1;
   const selectionLabel = hasSelection ? formatVerseParam(sortedSelected) : '';
   const allSelectedSaved = hasSelection && sortedSelected.every((n) => !!savedMap[n]);
+  const activeVerseNumber = isSingleSelection ? sortedSelected[0] : undefined;
+  const activeVerseNotes =
+    activeVerseNumber !== undefined ? (notesMap[activeVerseNumber] ?? []) : [];
 
   useEffect(() => {
     if (didScrollToInitial.current) return;
@@ -83,19 +87,26 @@ export function ChapterReaderClient({
   }, []);
 
   function toggleVerse(verseNumber: number) {
-    setSelectedNumbers((prev) => {
-      const next = prev.includes(verseNumber)
-        ? prev.filter((n) => n !== verseNumber)
-        : [...prev, verseNumber];
-      if (next.length === 1 && next[0] !== undefined) setNoteDraft(notesMap[next[0]] ?? '');
-      return next;
-    });
+    setSelectedNumbers((prev) =>
+      prev.includes(verseNumber) ? prev.filter((n) => n !== verseNumber) : [...prev, verseNumber],
+    );
     setSheetView('actions');
+  }
+
+  function openNotesFor(verseNumber: number) {
+    setSelectedNumbers([verseNumber]);
+    setSheetView('view-notes');
   }
 
   function closeSheet() {
     setSelectedNumbers([]);
     setSheetView('actions');
+  }
+
+  function startNewNote() {
+    setNoteDraft('');
+    setNoteColor(PASTEL_COLORS[0]);
+    setSheetView('note');
   }
 
   async function toggleSaved() {
@@ -140,9 +151,7 @@ export function ChapterReaderClient({
   }
 
   async function saveNote() {
-    if (!isSingleSelection) return;
-    const verseNumber = sortedSelected[0];
-    if (verseNumber === undefined) return;
+    if (activeVerseNumber === undefined) return;
     const chapter = chapterIndex + 1;
     const text = noteDraft.trim();
     if (!text) return;
@@ -154,20 +163,47 @@ export function ChapterReaderClient({
         body: JSON.stringify({
           bookKey,
           chapter,
-          verse: verseNumber,
+          verse: activeVerseNumber,
           versionKey: version,
           noteText: text,
+          color: noteColor,
         }),
       });
       const data = (await res.json()) as ApiResponse<VerseNote>;
       if (!res.ok || !data.success) throw new Error();
-      setNotesMap((prev) => ({ ...prev, [verseNumber]: text }));
+      setNotesMap((prev) => {
+        const next = { ...prev };
+        const existing = next[activeVerseNumber] ?? [];
+        next[activeVerseNumber] = [
+          ...existing,
+          { id: data.data.id, noteText: data.data.noteText, color: data.data.color },
+        ];
+        return next;
+      });
       toast.success('Nota guardada');
-      closeSheet();
+      setSheetView('view-notes');
     } catch {
       toast.error('No se pudo guardar la nota');
     } finally {
       setSavingNote(false);
+    }
+  }
+
+  async function deleteNote(noteId: string) {
+    if (activeVerseNumber === undefined) return;
+    setDeletingNoteId(noteId);
+    try {
+      const res = await fetch(`/api/bible/notes/${noteId}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error();
+      setNotesMap((prev) => {
+        const next = { ...prev };
+        next[activeVerseNumber] = (next[activeVerseNumber] ?? []).filter((n) => n.id !== noteId);
+        return next;
+      });
+    } catch {
+      toast.error('No se pudo borrar la nota');
+    } finally {
+      setDeletingNoteId(null);
     }
   }
 
@@ -189,6 +225,29 @@ export function ChapterReaderClient({
       toast.success('¡Copiado!', { duration: 2000 });
     } catch {
       toast.error('No se pudo copiar');
+    }
+  }
+
+  async function shareChapter() {
+    const chapter = chapterIndex + 1;
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? '';
+    const link = `${appUrl}/biblia/${bookKey}/${chapterIndex}`;
+    const message = `${bookName} ${chapter} (${version})\n\nLee este capítulo en la app:\n${link}\n\nDescarga ICT Devocional:\nhttps://ict-devocional.vercel.app`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ text: message });
+      } catch {
+        // usuario canceló el share, no hacer nada
+      }
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(message);
+      toast.success('¡Copiado!', { duration: 2000 });
+    } catch {
+      toast.error('No se pudo compartir');
     }
   }
 
@@ -219,6 +278,7 @@ export function ChapterReaderClient({
         <div className="flex items-center gap-1">
           <button
             type="button"
+            onClick={() => router.push('/biblia/buscar')}
             aria-label="Buscar"
             className="text-muted flex h-9 w-9 items-center justify-center rounded-full"
           >
@@ -226,10 +286,11 @@ export function ChapterReaderClient({
           </button>
           <button
             type="button"
-            aria-label="Más opciones"
+            onClick={shareChapter}
+            aria-label="Compartir capítulo"
             className="text-muted flex h-9 w-9 items-center justify-center rounded-full"
           >
-            <MoreHorizontal size={18} />
+            <Share2 size={18} />
           </button>
           <VersionSwitcher version={version} />
         </div>
@@ -242,23 +303,53 @@ export function ChapterReaderClient({
           {verses.map((text, idx) => {
             const verseNumber = idx + 1;
             const isSelected = selectedNumbers.includes(verseNumber);
+            const verseNotes = notesMap[verseNumber] ?? [];
+            const highlightColor = verseNotes[verseNotes.length - 1]?.color;
+
             return (
-              <button
+              <div
                 key={idx}
                 id={`verse-${verseNumber}`}
-                type="button"
+                role="button"
+                tabIndex={0}
                 onClick={() => toggleVerse(verseNumber)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    toggleVerse(verseNumber);
+                  }
+                }}
                 className={cn(
-                  'rounded-lg px-2 py-1 text-left transition-colors',
+                  'flex cursor-pointer items-start gap-1.5 rounded-lg px-2 py-1 text-left transition-colors',
                   isSelected &&
                     'bg-[var(--color-primary-light)] dark:bg-[var(--color-primary-dark)]/40',
                 )}
+                style={
+                  !isSelected && highlightColor ? { backgroundColor: highlightColor } : undefined
+                }
               >
-                <span className="text-muted mr-1.5 align-top text-xs font-semibold">
-                  {verseNumber}
-                </span>
-                <span className="text-[18px] leading-loose">{text}</span>
-              </button>
+                <span className="text-muted mt-0.5 text-xs font-semibold">{verseNumber}</span>
+                <span className="flex-1 text-[18px] leading-loose">{text}</span>
+                {verseNotes.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openNotesFor(verseNumber);
+                    }}
+                    aria-label={`${verseNotes.length} nota(s) en este versículo`}
+                    className="mt-2 flex shrink-0 items-center gap-0.5 rounded-full px-1 py-1"
+                  >
+                    {verseNotes.slice(0, 4).map((note) => (
+                      <span
+                        key={note.id}
+                        className="h-2 w-2 rounded-full border border-black/10"
+                        style={{ backgroundColor: note.color }}
+                      />
+                    ))}
+                  </button>
+                )}
+              </div>
             );
           })}
         </div>
@@ -275,7 +366,13 @@ export function ChapterReaderClient({
         >
           <ChevronLeft size={20} />
         </button>
-        <span className="text-sm font-semibold">{chapterTitle}</span>
+        <button
+          type="button"
+          onClick={() => router.push('/biblia')}
+          className="rounded-full px-3 py-1 text-sm font-semibold"
+        >
+          {chapterTitle}
+        </button>
         <button
           type="button"
           disabled={!hasNext}
@@ -308,19 +405,8 @@ export function ChapterReaderClient({
               </button>
             </div>
 
-            {sheetView === 'actions' ? (
+            {sheetView === 'actions' && (
               <>
-                <div className="mb-4 flex items-center justify-center gap-4">
-                  {HIGHLIGHT_COLORS.map((color) => (
-                    <button
-                      key={color}
-                      type="button"
-                      aria-label="Resaltar"
-                      className="h-8 w-8 rounded-full border border-black/5"
-                      style={{ backgroundColor: color }}
-                    />
-                  ))}
-                </div>
                 <div className="grid grid-cols-4 gap-2">
                   <button
                     type="button"
@@ -340,7 +426,7 @@ export function ChapterReaderClient({
                   </button>
                   <button
                     type="button"
-                    onClick={() => isSingleSelection && setSheetView('note')}
+                    onClick={() => isSingleSelection && setSheetView('view-notes')}
                     disabled={!isSingleSelection}
                     className="flex flex-col items-center gap-1.5 rounded-2xl py-3 disabled:opacity-30"
                   >
@@ -370,8 +456,64 @@ export function ChapterReaderClient({
                   </p>
                 )}
               </>
-            ) : (
+            )}
+
+            {sheetView === 'view-notes' && (
               <div className="flex flex-col gap-3">
+                {activeVerseNotes.length === 0 ? (
+                  <p className="text-muted text-center text-sm">
+                    Aún no hay notas en este versículo
+                  </p>
+                ) : (
+                  <div className="flex max-h-64 flex-col gap-2 overflow-y-auto">
+                    {activeVerseNotes.map((note) => (
+                      <div
+                        key={note.id}
+                        className="flex items-start justify-between gap-2 rounded-xl p-3"
+                        style={{ backgroundColor: note.color }}
+                      >
+                        <p className="text-sm break-words text-black">{note.noteText}</p>
+                        <button
+                          type="button"
+                          onClick={() => deleteNote(note.id)}
+                          disabled={deletingNoteId === note.id}
+                          aria-label="Borrar nota"
+                          className="shrink-0 text-black/50 hover:text-black/80 disabled:opacity-40"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={startNewNote}
+                  className="border-border flex items-center justify-center gap-1.5 rounded-2xl border border-dashed py-3 text-sm font-semibold"
+                >
+                  <Plus size={16} />
+                  Agregar nota
+                </button>
+              </div>
+            )}
+
+            {sheetView === 'note' && (
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-center gap-2">
+                  {PASTEL_COLORS.map((color) => (
+                    <button
+                      key={color}
+                      type="button"
+                      aria-label="Elegir color"
+                      onClick={() => setNoteColor(color)}
+                      className={cn(
+                        'h-7 w-7 rounded-full border-2',
+                        noteColor === color ? 'border-black/60' : 'border-black/10',
+                      )}
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </div>
                 <textarea
                   value={noteDraft}
                   onChange={(e) => setNoteDraft(e.target.value)}
@@ -383,7 +525,7 @@ export function ChapterReaderClient({
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    onClick={() => setSheetView('actions')}
+                    onClick={() => setSheetView('view-notes')}
                     className="border-border flex-1 rounded-2xl border py-3 text-sm font-semibold"
                   >
                     Atrás
