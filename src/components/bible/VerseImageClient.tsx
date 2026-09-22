@@ -4,7 +4,7 @@ import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { toast } from 'sonner';
-import { ArrowLeft, ImagePlus, Download } from 'lucide-react';
+import { ArrowLeft, ImagePlus, Share2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { BibleVersion } from '@/lib/bible-reader';
 
@@ -45,7 +45,7 @@ export function VerseImageClient({ bookName, chapter, verseLabel, version, verse
 
   const [selectedBg, setSelectedBg] = useState<string | null>(null);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
-  const [downloading, setDownloading] = useState(false);
+  const [sharing, setSharing] = useState(false);
 
   const reference = `${bookName} ${chapter}:${verseLabel} — ${version}`;
   const verseText =
@@ -71,9 +71,23 @@ export function VerseImageClient({ bookName, chapter, verseLabel, version, verse
     setUploadedImage(null);
   }
 
-  async function handleDownload() {
-    setDownloading(true);
+  function waitForPreviewImage() {
+    return new Promise<void>((resolve) => {
+      const img = document.getElementById('verse-image-preview-img') as HTMLImageElement | null;
+      if (!img || img.complete) {
+        resolve();
+        return;
+      }
+      img.addEventListener('load', () => resolve(), { once: true });
+      img.addEventListener('error', () => resolve(), { once: true });
+    });
+  }
+
+  async function handleShare() {
+    setSharing(true);
     try {
+      await waitForPreviewImage();
+
       const html2canvas = (await import('html2canvas')).default;
       const node = document.getElementById('verse-image-preview');
       if (!node) throw new Error('No se encontró la preview');
@@ -81,17 +95,37 @@ export function VerseImageClient({ bookName, chapter, verseLabel, version, verse
       const canvas = await html2canvas(node, {
         useCORS: true,
         backgroundColor: null,
+        imageTimeout: 15000,
       });
 
-      const dataUrl = canvas.toDataURL('image/png');
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
+      if (!blob) throw new Error('No se pudo generar la imagen');
+
+      const fileName = `${bookName}-${chapter}-${verseLabel}.png`
+        .toLowerCase()
+        .replace(/\s+/g, '-');
+      const file = new File([blob], fileName, { type: 'image/png' });
+      const shareText = `${reference}\n\nDescarga nuestra aplicación:\nhttps://ict-devocional.vercel.app`;
+
+      if (navigator.canShare?.({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], text: shareText });
+        } catch {
+          // usuario canceló el share, no hacer nada
+        }
+        return;
+      }
+
       const link = document.createElement('a');
-      link.href = dataUrl;
-      link.download = `${bookName}-${chapter}-${verseLabel}.png`.toLowerCase().replace(/\s+/g, '-');
+      link.href = URL.createObjectURL(blob);
+      link.download = fileName;
       link.click();
+      URL.revokeObjectURL(link.href);
+      toast.info('Tu navegador no permite compartir directamente — se descargó la imagen');
     } catch {
       toast.error('No se pudo generar la imagen');
     } finally {
-      setDownloading(false);
+      setSharing(false);
     }
   }
 
@@ -110,6 +144,52 @@ export function VerseImageClient({ bookName, chapter, verseLabel, version, verse
       </div>
 
       <div className="flex-1 px-5 py-4">
+        {previewUrl && (
+          <div className="mb-6 flex flex-col items-center gap-4">
+            <div
+              id="verse-image-preview"
+              className="relative aspect-[4/5] w-full max-w-sm overflow-hidden rounded-2xl"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                id="verse-image-preview-img"
+                src={previewUrl}
+                alt=""
+                crossOrigin="anonymous"
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+              <div className="absolute inset-0 bg-black/45" />
+              <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
+                <p
+                  className="text-2xl leading-snug font-bold text-white"
+                  style={{ textShadow: '0 2px 8px rgba(0,0,0,0.5)' }}
+                >
+                  {verseText}
+                </p>
+                <p
+                  className="mt-4 text-sm text-white/90"
+                  style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}
+                >
+                  {reference}
+                </p>
+              </div>
+              <div className="absolute right-3 bottom-3 text-[11px] text-white/70">
+                ICT Devocional
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleShare}
+              disabled={sharing}
+              className="bg-primary flex w-full max-w-sm items-center justify-center gap-2 rounded-2xl py-3 text-sm font-semibold text-white disabled:opacity-50"
+            >
+              <Share2 size={18} />
+              {sharing ? 'Generando…' : 'Compartir imagen'}
+            </button>
+          </div>
+        )}
+
         <p className="text-muted mb-4 text-sm">Crear imagen — Elige tu imagen de fondo</p>
 
         <div className="mb-6 grid grid-cols-3 gap-3">
@@ -152,51 +232,6 @@ export function VerseImageClient({ bookName, chapter, verseLabel, version, verse
             </button>
           ))}
         </div>
-
-        {previewUrl && (
-          <div className="flex flex-col items-center gap-4">
-            <div
-              id="verse-image-preview"
-              className="relative aspect-[4/5] w-full max-w-sm overflow-hidden rounded-2xl"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={previewUrl}
-                alt=""
-                crossOrigin="anonymous"
-                className="absolute inset-0 h-full w-full object-cover"
-              />
-              <div className="absolute inset-0 bg-black/45" />
-              <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
-                <p
-                  className="text-2xl leading-snug font-bold text-white"
-                  style={{ textShadow: '0 2px 8px rgba(0,0,0,0.5)' }}
-                >
-                  {verseText}
-                </p>
-                <p
-                  className="mt-4 text-sm text-white/90"
-                  style={{ textShadow: '0 1px 4px rgba(0,0,0,0.5)' }}
-                >
-                  {reference}
-                </p>
-              </div>
-              <div className="absolute right-3 bottom-3 text-[11px] text-white/70">
-                ICT Devocional
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleDownload}
-              disabled={downloading}
-              className="bg-primary flex w-full max-w-sm items-center justify-center gap-2 rounded-2xl py-3 text-sm font-semibold text-white disabled:opacity-50"
-            >
-              <Download size={18} />
-              {downloading ? 'Generando…' : 'Descargar imagen'}
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );
