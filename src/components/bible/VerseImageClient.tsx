@@ -3,17 +3,12 @@
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { Playfair_Display } from 'next/font/google';
 import { toast } from 'sonner';
 import { ArrowLeft, ImagePlus, Share2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { BibleVersion } from '@/lib/bible-reader';
 
-const verseFont = Playfair_Display({
-  subsets: ['latin'],
-  weight: ['600', '700'],
-  style: ['italic'],
-});
+const VERSE_FONT_FAMILY = '"Playfair Display", Georgia, serif';
 
 type Props = {
   bookName: string;
@@ -149,6 +144,10 @@ export function VerseImageClient({ bookName, chapter, verseLabel, version, verse
 
   return (
     <div className="flex min-h-dvh flex-col">
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,600;1,700&display=swap"
+      />
       <div className="border-border bg-background/95 sticky top-0 z-10 flex items-center gap-3 border-b px-4 py-3 backdrop-blur-lg">
         <button
           type="button"
@@ -182,8 +181,9 @@ export function VerseImageClient({ bookName, chapter, verseLabel, version, verse
                 style={{ padding: verseTextStyle.padding }}
               >
                 <p
-                  className={cn(verseFont.className, 'leading-snug font-semibold text-white')}
+                  className="leading-snug font-semibold text-white italic"
                   style={{
+                    fontFamily: VERSE_FONT_FAMILY,
                     fontSize: verseTextStyle.fontSize,
                     textShadow: '0 2px 8px rgba(0,0,0,0.5)',
                   }}
