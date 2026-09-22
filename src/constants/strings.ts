@@ -33,6 +33,7 @@ export const Strings = {
   tabs: {
     home: 'Inicio',
     plan: 'Plan',
+    biblia: 'Biblia',
     progress: 'Progreso',
     profile: 'Perfil',
   },

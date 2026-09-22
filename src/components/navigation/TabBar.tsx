@@ -3,13 +3,14 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion } from 'motion/react';
-import { Home, BookOpen, BarChart3, User } from 'lucide-react';
+import { Home, CalendarDays, BookOpen, BarChart3, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Strings } from '@/constants/strings';
 
 const tabs = [
   { href: '/', label: Strings.tabs.home, icon: Home },
-  { href: '/plan', label: Strings.tabs.plan, icon: BookOpen },
+  { href: '/plan', label: Strings.tabs.plan, icon: CalendarDays },
+  { href: '/biblia', label: Strings.tabs.biblia, icon: BookOpen },
   { href: '/progress', label: Strings.tabs.progress, icon: BarChart3 },
   { href: '/profile', label: Strings.tabs.profile, icon: User },
 ] as const;

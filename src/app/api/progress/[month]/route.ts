@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { getDaysInMonth, subDays } from 'date-fns';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
@@ -74,11 +75,21 @@ export async function GET(
   );
 
   if (streakState.current !== rawStreak?.current) {
-    await prisma.streak.upsert({
-      where: { userId: session.user.id },
-      update: { current: streakState.current },
-      create: { userId: session.user.id, current: streakState.current, best: streakState.best },
-    });
+    try {
+      await prisma.streak.upsert({
+        where: { userId: session.user.id },
+        update: { current: streakState.current },
+        create: { userId: session.user.id, current: streakState.current, best: streakState.best },
+      });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2003') {
+        return NextResponse.json(
+          { success: false, error: 'user_not_found', code: 'USER_NOT_FOUND' },
+          { status: 404 },
+        );
+      }
+      throw err;
+    }
   }
 
   const { state: displayState, frozenDays } = getStreakDisplayState(
@@ -95,11 +106,21 @@ export async function GET(
     madridNow,
   );
   if (needsLevelReset) {
-    await prisma.streak.upsert({
-      where: { userId: session.user.id },
-      update: { levelResetAt: madridNow },
-      create: { userId: session.user.id, levelResetAt: madridNow },
-    });
+    try {
+      await prisma.streak.upsert({
+        where: { userId: session.user.id },
+        update: { levelResetAt: madridNow },
+        create: { userId: session.user.id, levelResetAt: madridNow },
+      });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2003') {
+        return NextResponse.json(
+          { success: false, error: 'user_not_found', code: 'USER_NOT_FOUND' },
+          { status: 404 },
+        );
+      }
+      throw err;
+    }
   }
   const levelResetAt = needsLevelReset ? madridNow : (rawStreak?.levelResetAt ?? null);
   const levelDays = levelResetAt

@@ -16,6 +16,7 @@ model User {
   avatarUrl           String?              @map("avatar_url")
   timezone            String               @default("Europe/Madrid")
   isAdmin             Boolean              @default(false) @map("is_admin")
+  bibleVersion        String               @default("RVR1960") @map("bible_version")
   createdAt           DateTime             @default(now()) @map("created_at")
   updatedAt           DateTime             @updatedAt @map("updated_at")
   responses           DevotionalResponse[]
@@ -24,6 +25,8 @@ model User {
   streak              Streak?
   progress            UserProgress[]
   passwordResetTokens PasswordResetToken[]
+  savedVerses         SavedVerse[]
+  verseNotes          VerseNote[]
 
   @@map("users")
 }
@@ -170,4 +173,34 @@ model NotificationLog {
 
   @@unique([subscriptionId, slot, dateKey])
   @@map("notification_logs")
+}
+
+model SavedVerse {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  bookKey    String   @map("book_key")
+  chapter    Int
+  verse      Int
+  versionKey String   @map("version_key")
+  savedAt    DateTime @default(now()) @map("saved_at")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, bookKey, chapter, verse, versionKey])
+  @@map("saved_verses")
+}
+
+model VerseNote {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  bookKey    String   @map("book_key")
+  chapter    Int
+  verse      Int
+  versionKey String   @map("version_key")
+  noteText   String   @map("note_text") @db.Text
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, bookKey, chapter, verse, versionKey])
+  @@map("verse_notes")
 }
