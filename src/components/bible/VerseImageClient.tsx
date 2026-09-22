@@ -39,6 +39,15 @@ const BACKGROUNDS = [
   { file: 'bg-20.jpg' },
 ];
 
+// Ajusta tamaño de letra y padding al largo del texto para que quepa dentro de la imagen
+function getVerseTextStyle(charCount: number): { fontSize: string; padding: string } {
+  if (charCount <= 80) return { fontSize: '1.5rem', padding: '1.5rem' };
+  if (charCount <= 150) return { fontSize: '1.25rem', padding: '1.75rem' };
+  if (charCount <= 250) return { fontSize: '1.05rem', padding: '2rem' };
+  if (charCount <= 400) return { fontSize: '0.9rem', padding: '2.25rem' };
+  return { fontSize: '0.8rem', padding: '2.5rem' };
+}
+
 export function VerseImageClient({ bookName, chapter, verseLabel, version, verses }: Props) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -53,6 +62,7 @@ export function VerseImageClient({ bookName, chapter, verseLabel, version, verse
       ? verses[0].text
       : verses.map((v) => `${v.number} ${v.text}`).join(' ');
   const previewUrl = uploadedImage ?? (selectedBg ? `/bible-backgrounds/${selectedBg}` : null);
+  const verseTextStyle = getVerseTextStyle(verseText.length);
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -159,10 +169,16 @@ export function VerseImageClient({ bookName, chapter, verseLabel, version, verse
                 className="absolute inset-0 h-full w-full object-cover"
               />
               <div className="absolute inset-0" style={{ backgroundColor: 'rgba(0,0,0,0.45)' }} />
-              <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
+              <div
+                className="absolute inset-0 flex flex-col items-center justify-center text-center"
+                style={{ padding: verseTextStyle.padding }}
+              >
                 <p
-                  className="text-2xl leading-snug font-bold text-white"
-                  style={{ textShadow: '0 2px 8px rgba(0,0,0,0.5)' }}
+                  className="leading-snug font-bold text-white"
+                  style={{
+                    fontSize: verseTextStyle.fontSize,
+                    textShadow: '0 2px 8px rgba(0,0,0,0.5)',
+                  }}
                 >
                   {verseText}
                 </p>
