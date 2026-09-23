@@ -120,15 +120,17 @@ export function BibleHomeClient({ bibleVersion, books }: Props) {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.05, duration: 0.3 }}
-        className="border-border bg-surface flex items-center gap-2 rounded-full border px-3 py-2.5"
+        className="bg-background/95 sticky top-0 z-20 -mx-5 px-5 py-2 backdrop-blur-lg"
       >
-        <Search size={16} className="text-muted shrink-0" />
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Buscar libro..."
-          className="w-full bg-transparent text-sm outline-none"
-        />
+        <div className="border-border bg-surface flex items-center gap-2 rounded-full border px-3 py-2.5">
+          <Search size={16} className="text-muted shrink-0" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Buscar libro..."
+            className="w-full bg-transparent text-sm outline-none"
+          />
+        </div>
       </motion.div>
 
       {oldTestament.length > 0 && (
