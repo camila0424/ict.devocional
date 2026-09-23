@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronDown, Search } from 'lucide-react';
+import { Bookmark, ChevronDown, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { VersionSwitcher } from '@/components/bible/VersionSwitcher';
 import type { BibleBook, BibleVersion } from '@/lib/bible-reader';
@@ -113,7 +113,17 @@ export function BibleHomeClient({ bibleVersion, books }: Props) {
         className="flex items-center justify-between"
       >
         <h1 className="text-2xl font-extrabold">Biblia</h1>
-        <VersionSwitcher version={bibleVersion} />
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => router.push('/biblia/guardados')}
+            aria-label="Guardados y notas"
+            className="text-muted flex h-9 w-9 items-center justify-center rounded-full"
+          >
+            <Bookmark size={20} />
+          </button>
+          <VersionSwitcher version={bibleVersion} />
+        </div>
       </motion.div>
 
       <motion.div
