@@ -1,5 +1,19 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## ⚠️ Base de datos — leer antes de tocar el schema
+
+`DATABASE_URL` en `.env.local` apunta **directo a la base de producción real en Neon** (Postgres). No hay una base separada para desarrollo local — cualquier comando que corras localmente afecta los datos reales de los usuarios.
+
+**Regla:** para cualquier cambio de `prisma/schema.prisma`, usa siempre:
+
+```bash
+npx prisma db push
+```
+
+**Nunca** uses `npx prisma migrate dev` ni `npx prisma migrate reset` contra esta base. Este proyecto nunca adoptó el sistema de migraciones de Prisma (el historial en `_prisma_migrations` no está sincronizado con el estado real de la base), así que esos comandos detectan "drift" y ofrecen **resetear la base entera** (borrar y recrear todas las tablas) para poder aplicar una migración "inicial" limpia. Ya pasó una vez — se perdieron todos los usuarios y el contenido devocional hasta que se restauró desde un backup de Neon.
+
+Si esto llega a pasar de nuevo: Neon guarda historial para restaurar (Backup & Restore → Restore from history), pero en el plan gratuito **solo cubre las últimas 6 horas** — hay que actuar rápido.
+
 ## Getting Started
 
 First, run the development server:
