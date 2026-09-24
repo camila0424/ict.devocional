@@ -1,5 +1,6 @@
 import { readFileSync, existsSync } from 'fs';
 import path from 'path';
+import { normalizeBibleText, stem, STOPWORDS } from './bible-search-text';
 
 export type BibleVersion = 'RVR1960' | 'NTV';
 
@@ -166,33 +167,181 @@ export interface BibleSearchResult {
   bookName: string;
   chapterIndex: number;
   verseNumber: number;
+  // Último versículo cuando el fragmento buscado cruza dos versículos seguidos.
+  verseEnd?: number;
   text: string;
+  match: 'exact' | 'similar';
 }
 
-export function searchBible(query: string, version: BibleVersion, limit = 50): BibleSearchResult[] {
-  const normalized = query.trim().toLowerCase();
-  if (normalized.length < 2) return [];
+interface IndexedVerse {
+  bookKey: string;
+  chapterIndex: number;
+  verseNumber: number;
+  text: string;
+  norm: string;
+  stems: Set<string>;
+  bigrams: Set<string>;
+}
 
-  const results: BibleSearchResult[] = [];
+function bigramsOf(tokens: string[]): Set<string> {
+  const set = new Set<string>();
+  for (let i = 0; i < tokens.length - 1; i++) set.add(`${tokens[i]} ${tokens[i + 1]}`);
+  return set;
+}
 
+// Umbral de parecido para mostrar un versículo como "similar" (0–1).
+const MIN_SIMILAR_SCORE = 0.3;
+
+interface SearchIndex {
+  verses: IndexedVerse[];
+  // En cuántos versículos aparece cada raíz: las palabras raras pesan más al comparar.
+  docFreq: Map<string, number>;
+}
+
+const searchIndexCache = new Map<BibleVersion, SearchIndex>();
+
+function getSearchIndex(version: BibleVersion): SearchIndex {
+  const cached = searchIndexCache.get(version);
+  if (cached) return cached;
+
+  const index: IndexedVerse[] = [];
+  const docFreq = new Map<string, number>();
   for (const key of CANONICAL_KEYS) {
     const book = loadBook(key, version);
     for (let chapterIndex = 0; chapterIndex < book.length; chapterIndex++) {
       const verses = book[chapterIndex] ?? [];
       for (let i = 0; i < verses.length; i++) {
         const text = verses[i];
-        if (!text || !text.toLowerCase().includes(normalized)) continue;
-        results.push({
+        if (!text) continue;
+        const norm = normalizeBibleText(text);
+        const tokens = norm.split(' ').filter(Boolean);
+        const stems = new Set(tokens.map(stem));
+        for (const s of stems) docFreq.set(s, (docFreq.get(s) ?? 0) + 1);
+        index.push({
           bookKey: key,
-          bookName: BOOK_NAMES_ES[key]!,
           chapterIndex,
           verseNumber: i + 1,
           text,
+          norm,
+          stems,
+          bigrams: bigramsOf(tokens),
         });
-        if (results.length >= limit) return results;
       }
     }
   }
 
-  return results;
+  const searchIndex = { verses: index, docFreq };
+  searchIndexCache.set(version, searchIndex);
+  return searchIndex;
+}
+
+function toResult(
+  verse: IndexedVerse,
+  match: BibleSearchResult['match'],
+  next?: IndexedVerse,
+): BibleSearchResult {
+  return {
+    bookKey: verse.bookKey,
+    bookName: BOOK_NAMES_ES[verse.bookKey]!,
+    chapterIndex: verse.chapterIndex,
+    verseNumber: verse.verseNumber,
+    ...(next ? { verseEnd: next.verseNumber } : {}),
+    text: next ? `${verse.text} ${next.text}` : verse.text,
+    match,
+  };
+}
+
+// Busca una palabra o un fragmento del texto bíblico. Ignora tildes, mayúsculas y
+// puntuación. Con fragmentos largos devuelve primero las coincidencias exactas (aunque
+// crucen dos versículos) y luego los versículos más parecidos, ordenados por relevancia.
+export function searchBible(query: string, version: BibleVersion, limit = 50): BibleSearchResult[] {
+  const normQuery = normalizeBibleText(query);
+  if (normQuery.length < 2) return [];
+
+  const { verses: index, docFreq } = getSearchIndex(version);
+  const queryTokens = normQuery.split(' ');
+  const contentStems = [...new Set(queryTokens.filter((t) => !STOPWORDS.has(t)).map(stem))];
+
+  // Palabra suelta o frase corta: coincidencia de palabras completas (admite plural)
+  // en orden canónico. normQuery solo contiene [a-z0-9 ], así que es seguro en la regex.
+  if (contentStems.length <= 2) {
+    const wordRegex = new RegExp(`(^| )${normQuery}(s|es)?( |$)`);
+    const results: BibleSearchResult[] = [];
+    for (const verse of index) {
+      if (!wordRegex.test(verse.norm)) continue;
+      results.push(toResult(verse, 'exact'));
+      if (results.length >= limit) break;
+    }
+    return results;
+  }
+
+  const paddedQuery = ` ${normQuery} `;
+  const exact: BibleSearchResult[] = [];
+  const exactKeys = new Set<number>();
+
+  for (let i = 0; i < index.length; i++) {
+    const verse = index[i]!;
+    if (` ${verse.norm} `.includes(paddedQuery)) {
+      exact.push(toResult(verse, 'exact'));
+      exactKeys.add(i);
+      continue;
+    }
+    // El fragmento puede empezar en un versículo y terminar en el siguiente.
+    const next = index[i + 1];
+    if (
+      next &&
+      next.bookKey === verse.bookKey &&
+      next.chapterIndex === verse.chapterIndex &&
+      !` ${next.norm} `.includes(paddedQuery) &&
+      ` ${verse.norm} ${next.norm} `.includes(paddedQuery)
+    ) {
+      exact.push(toResult(verse, 'exact', next));
+      exactKeys.add(i);
+      exactKeys.add(i + 1);
+    }
+  }
+
+  const queryBigrams = bigramsOf(queryTokens);
+  const weights = contentStems.map((s) =>
+    Math.log((index.length + 1) / ((docFreq.get(s) ?? 0) + 1)),
+  );
+  const totalWeight = weights.reduce((a, b) => a + b, 0) || 1;
+  // Al menos la mitad de las palabras del fragmento, y nunca menos de 3 (o todas si hay menos).
+  const minWordHits = Math.min(
+    contentStems.length,
+    Math.max(3, Math.ceil(contentStems.length / 2)),
+  );
+  const scored: { i: number; score: number }[] = [];
+
+  for (let i = 0; i < index.length; i++) {
+    if (exactKeys.has(i)) continue;
+    const verse = index[i]!;
+
+    let wordHits = 0;
+    let hitWeight = 0;
+    contentStems.forEach((s, k) => {
+      if (!verse.stems.has(s)) return;
+      wordHits++;
+      hitWeight += weights[k]!;
+    });
+    if (wordHits < minWordHits) continue;
+    const wordCoverage = hitWeight / totalWeight;
+
+    let bigramHits = 0;
+    for (const b of queryBigrams) if (verse.bigrams.has(b)) bigramHits++;
+    const bigramCoverage = queryBigrams.size ? bigramHits / queryBigrams.size : 0;
+
+    const score = wordCoverage * 0.6 + bigramCoverage * 0.4;
+    if (score < MIN_SIMILAR_SCORE) continue;
+    scored.push({ i, score });
+  }
+
+  // Estable: a igual puntuación se respeta el orden canónico.
+  scored.sort((a, b) => b.score - a.score);
+
+  const similar = scored
+    .slice(0, Math.max(0, limit - exact.length))
+    .map(({ i }) => toResult(index[i]!, 'similar'));
+
+  return [...exact, ...similar].slice(0, limit);
 }
