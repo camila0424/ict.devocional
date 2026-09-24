@@ -6,7 +6,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Bookmark, ChevronDown, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { VersionSwitcher } from '@/components/bible/VersionSwitcher';
+import { BibleVerseResults, useBibleVerseSearch } from '@/components/bible/BibleVerseSearch';
 import type { BibleBook, BibleVersion } from '@/lib/bible-reader';
+import { normalizeBibleText } from '@/lib/bible-search-text';
 
 type BookWithChapters = BibleBook & { chapterCount: number };
 
@@ -81,6 +83,8 @@ export function BibleHomeClient({ bibleVersion, books }: Props) {
   const router = useRouter();
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const [query, setQuery] = useState('');
+  const trimmedQuery = query.trim();
+  const verseSearch = useBibleVerseSearch(query, bibleVersion);
 
   function toggleBook(key: string) {
     setExpandedKey((current) => (current === key ? null : key));
@@ -93,9 +97,9 @@ export function BibleHomeClient({ bibleVersion, books }: Props) {
   const { oldTestament, newTestament } = useMemo(() => {
     const splitIndex = books.findIndex((b) => b.key === 'matthew');
     const ntStart = splitIndex === -1 ? books.length : splitIndex;
-    const normalized = query.trim().toLowerCase();
+    const normalized = normalizeBibleText(query);
     const filtered = normalized
-      ? books.filter((b) => b.nameEs.toLowerCase().includes(normalized))
+      ? books.filter((b) => normalizeBibleText(b.nameEs).includes(normalized))
       : books;
 
     return {
@@ -137,7 +141,7 @@ export function BibleHomeClient({ bibleVersion, books }: Props) {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar libro..."
+            placeholder="Busca un libro, una palabra o pega un versículo..."
             className="w-full bg-transparent text-sm outline-none"
           />
         </div>
@@ -187,11 +191,30 @@ export function BibleHomeClient({ bibleVersion, books }: Props) {
         </motion.div>
       )}
 
-      {oldTestament.length === 0 && newTestament.length === 0 && (
-        <p className="text-muted mt-4 text-center text-sm">
-          No encontramos ningún libro para &quot;{query}&quot;
-        </p>
+      {trimmedQuery.length >= 2 && (verseSearch.loading || verseSearch.results.length > 0) && (
+        <div>
+          <h2 className="text-muted mb-2 text-xs font-semibold tracking-wide uppercase">
+            Versículos
+          </h2>
+          {verseSearch.loading && verseSearch.results.length === 0 && (
+            <p className="text-muted text-center text-sm">Buscando…</p>
+          )}
+          <BibleVerseResults
+            results={verseSearch.results}
+            resultsQuery={verseSearch.resultsQuery}
+          />
+        </div>
       )}
+
+      {trimmedQuery.length >= 2 &&
+        !verseSearch.loading &&
+        verseSearch.results.length === 0 &&
+        oldTestament.length === 0 &&
+        newTestament.length === 0 && (
+          <p className="text-muted mt-4 text-center text-sm">
+            Sin resultados para &quot;{trimmedQuery}&quot;
+          </p>
+        )}
     </div>
   );
 }

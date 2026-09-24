@@ -1,86 +1,24 @@
 'use client';
 
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Search } from 'lucide-react';
-import type { ApiResponse } from '@/types/api';
-import type { BibleSearchResult, BibleVersion } from '@/lib/bible-reader';
-import { contentStemsOf, normalizeBibleText, stem } from '@/lib/bible-search-text';
+import type { BibleVersion } from '@/lib/bible-reader';
+import { BibleVerseResults, useBibleVerseSearch } from '@/components/bible/BibleVerseSearch';
 
 type Props = {
   version: BibleVersion;
 };
 
-// Resalta en el versículo las palabras que coinciden con la búsqueda.
-function HighlightedText({ text, stems }: { text: string; stems: Set<string> }) {
-  const parts = text.split(/([p{L}p{N}]+)/u);
-  return (
-    <>
-      {parts.map((part, i) =>
-        i % 2 === 1 && stems.has(stem(normalizeBibleText(part))) ? (
-          <span key={i} className="font-semibold text-[var(--color-primary)]">
-            {part}
-          </span>
-        ) : (
-          <Fragment key={i}>{part}</Fragment>
-        ),
-      )}
-    </>
-  );
-}
-
 export function BibleSearchClient({ version }: Props) {
   const router = useRouter();
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<BibleSearchResult[]>([]);
-  const [loading, setLoading] = useState(false);
+  const { results, resultsQuery, loading } = useBibleVerseSearch(query, version);
   const inputRef = useRef<HTMLInputElement>(null);
-  // Las raíces se calculan de la búsqueda que produjo los resultados, no de lo que se
-  // está escribiendo, para que el resaltado no cambie antes de que lleguen resultados nuevos.
-  const [resultsQuery, setResultsQuery] = useState('');
-  const highlightStems = useMemo(() => new Set(contentStemsOf(resultsQuery)), [resultsQuery]);
 
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
-
-  useEffect(() => {
-    const q = query.trim();
-    const controller = new AbortController();
-
-    const timer = setTimeout(() => {
-      if (q.length < 2) {
-        setResults([]);
-        setLoading(false);
-        return;
-      }
-
-      setLoading(true);
-      fetch(`/api/bible/search?q=${encodeURIComponent(q)}&version=${version}`, {
-        signal: controller.signal,
-      })
-        .then((res) => res.json())
-        .then((json: ApiResponse<BibleSearchResult[]>) => {
-          if (!json.success) return;
-          setResults(json.data);
-          setResultsQuery(q);
-        })
-        .catch(() => {})
-        .finally(() => setLoading(false));
-    }, 300);
-
-    return () => {
-      clearTimeout(timer);
-      controller.abort();
-    };
-  }, [query, version]);
-
-  function goToResult(result: BibleSearchResult) {
-    const verses = result.verseEnd
-      ? `${result.verseNumber}-${result.verseEnd}`
-      : `${result.verseNumber}`;
-    router.push(`/biblia/${result.bookKey}/${result.chapterIndex}?v=${verses}`);
-  }
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -118,30 +56,7 @@ export function BibleSearchClient({ version }: Props) {
           <p className="text-muted text-center text-sm">Escribe al menos 2 letras</p>
         )}
 
-        <div className="flex flex-col gap-2">
-          {results.map((result, i) => (
-            <Fragment key={`${result.bookKey}-${result.chapterIndex}-${result.verseNumber}-${i}`}>
-              {result.match === 'similar' && results[i - 1]?.match !== 'similar' && (
-                <p className="text-muted mt-3 mb-1 px-1 text-xs font-bold tracking-wide uppercase">
-                  Pasajes similares
-                </p>
-              )}
-              <button
-                type="button"
-                onClick={() => goToResult(result)}
-                className="border-border bg-surface rounded-2xl border p-4 text-left"
-              >
-                <p className="mb-1 text-xs font-bold text-[var(--color-primary)]">
-                  {result.bookName} {result.chapterIndex + 1}:{result.verseNumber}
-                  {result.verseEnd ? `-${result.verseEnd}` : ''}
-                </p>
-                <p className="text-sm leading-relaxed">
-                  <HighlightedText text={result.text} stems={highlightStems} />
-                </p>
-              </button>
-            </Fragment>
-          ))}
-        </div>
+        <BibleVerseResults results={results} resultsQuery={resultsQuery} />
       </div>
     </div>
   );
