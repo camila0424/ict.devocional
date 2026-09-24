@@ -19,9 +19,11 @@ export async function sendReminders() {
   const todaySpain = new Date(nowSpain.getFullYear(), nowSpain.getMonth(), nowSpain.getDate());
   const dateKey = dateKeyOf(nowSpain);
 
+  // De madrugada no hay turno: antes las horas 0–5 contaban como "mañana", así que el primer
+  // cron tras la medianoche mandaba el recordatorio a las 00:00 y el de las 6:00 quedaba deduplicado.
   const hourSpain = nowSpain.getHours();
-  const turno: 'mañana' | 'tarde' | 'noche' =
-    hourSpain < 12 ? 'mañana' : hourSpain < 17 ? 'tarde' : 'noche';
+  const turno: 'mañana' | 'tarde' | 'noche' | null =
+    hourSpain < 6 ? null : hourSpain < 14 ? 'mañana' : hourSpain < 19 ? 'tarde' : 'noche';
 
   // Determine which hours fall in the current turno (based on user's stored local hour)
   function matchesTurno(reminderHour: number): boolean {
@@ -57,6 +59,7 @@ export async function sendReminders() {
   // Recordatorio ligado a los cron jobs (mañana/tarde/noche), como antes — pero deduplicado
   // para que no se repita si más de un cron cae en la misma ventana el mismo día.
   const turnoEligible = subscriptions.filter((s) => {
+    if (turno === null) return false;
     const r = s.user.reminder;
     const isElegible = r === null ? turno === 'mañana' : r.enabled && matchesTurno(r.hour);
     return isElegible && !sentSet.has(`${s.id}:${turno}`);
@@ -84,7 +87,8 @@ export async function sendReminders() {
   });
 
   const completedSet = new Set(completedToday.map((p) => p.userId));
-  const recordatorio = getRecordatorio(turno);
+  // Los avisos a hora exacta de madrugada usan el texto de la noche
+  const recordatorio = getRecordatorio(turno ?? 'noche');
   const fraseDelDia = getFraseDelDia(nowSpain);
 
   const send = (

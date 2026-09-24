@@ -1,9 +1,10 @@
 import { redirect } from 'next/navigation';
-import { LogOut, User } from 'lucide-react';
-import { auth, signOut } from '@/lib/auth';
+import { User } from 'lucide-react';
+import { auth } from '@/lib/auth';
 import { ReminderPicker } from '@/components/profile/ReminderPicker';
 import { PushSubscribeButton } from '@/components/profile/PushSubscribeButton';
 import { DeleteAccountButton } from '@/components/profile/DeleteAccountButton';
+import { SignOutButton } from '@/components/profile/SignOutButton';
 
 export default async function ProfilePage() {
   const session = await auth();
@@ -40,20 +41,7 @@ export default async function ProfilePage() {
       <PushSubscribeButton />
 
       {/* Cerrar sesión */}
-      <form
-        action={async () => {
-          'use server';
-          await signOut({ redirectTo: '/login' });
-        }}
-      >
-        <button
-          type="submit"
-          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-red-200 bg-red-50 py-4 text-sm font-semibold text-red-600 transition-colors hover:bg-red-100 active:scale-[0.98] dark:border-red-900 dark:bg-red-950/40 dark:text-red-400"
-        >
-          <LogOut size={18} />
-          Cerrar sesión
-        </button>
-      </form>
+      <SignOutButton />
 
       <DeleteAccountButton />
     </div>
