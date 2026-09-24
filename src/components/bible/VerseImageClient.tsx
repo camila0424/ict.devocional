@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { toast } from 'sonner';
@@ -63,6 +63,11 @@ export function VerseImageClient({ bookName, chapter, verseLabel, version, verse
       : verses.map((v) => `${v.number} ${v.text}`).join(' ');
   const previewUrl = uploadedImage ?? (selectedBg ? `/bible-backgrounds/${selectedBg}` : null);
   const verseTextStyle = getVerseTextStyle(verseText.length);
+
+  // Al elegir un fondo, lleva al usuario al inicio para que vea la vista previa
+  useEffect(() => {
+    if (previewUrl) window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [previewUrl]);
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
