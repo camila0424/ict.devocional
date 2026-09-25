@@ -112,6 +112,12 @@ function getRvrFileKeyMap(): Record<string, string> {
   return map;
 }
 
+// Inverso de getRvrFileKeyMap: nombre de archivo RVR1960 (p. ej. "salmos") -> bookKey canónico ("psalms").
+export function getCanonicalBookKey(rvrFileKey: string): string | undefined {
+  const map = getRvrFileKeyMap();
+  return CANONICAL_KEYS.find((key) => map[key] === rvrFileKey);
+}
+
 function getFilePath(bookKey: string, version: BibleVersion): string {
   if (version === 'NTV') {
     return path.join(NTV_DIR, `${bookKey}.json`);

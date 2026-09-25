@@ -1,11 +1,26 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
-import { ArrowLeft, BookOpen, X, ChevronDown, ChevronUp, Loader2, Share2 } from 'lucide-react';
+import {
+  ArrowLeft,
+  BookOpen,
+  X,
+  ChevronDown,
+  ChevronUp,
+  Loader2,
+  NotebookPen,
+  Share2,
+} from 'lucide-react';
 import { toast } from 'sonner';
+import type { VerseNote } from '@prisma/client';
 import { fetchBibleReading } from '@/services/bibleService';
+import type { BibleReading } from '@/lib/bible-books';
+import { DEVOTIONAL_VERSION_KEY } from '@/lib/note-source';
+import type { ApiResponse } from '@/types/api';
+import { VerseNotesPanel, type VerseNoteEntry } from '@/components/bible/VerseNotesPanel';
 
 import { cn } from '@/lib/utils';
 import { Strings } from '@/constants/strings';
@@ -61,6 +76,38 @@ const EMPTY_RESPONSE: ResponseState = {
 
 type ReadingItemUIState = 'idle' | 'loading' | 'open' | 'error';
 
+const verseKey = (chapter: number, verse: number) => `${chapter}:${verse}`;
+
+// Notas del usuario sobre los versículos de esta lectura: las del devocional y las que escribió
+// en la Biblia sobre la misma versión (RVR1960). Si falla, la lectura se muestra igual sin notas.
+async function fetchReadingNotes(data: BibleReading): Promise<Record<string, VerseNoteEntry[]>> {
+  try {
+    const res = await fetch(`/api/bible/notes?bookKey=${encodeURIComponent(data.bibleKey)}`);
+    const json = (await res.json()) as ApiResponse<VerseNote[]>;
+    if (!res.ok || !json.success) return {};
+
+    const inReading = new Set(
+      data.chapters.flatMap((ch) => ch.verses.map((v) => verseKey(ch.number, v.number))),
+    );
+    const map: Record<string, VerseNoteEntry[]> = {};
+    // La API las devuelve de la más reciente a la más antigua; las mostramos en orden de creación
+    for (const note of [...json.data].reverse()) {
+      const key = verseKey(note.chapter, note.verse);
+      if (!inReading.has(key)) continue;
+      if (note.versionKey !== DEVOTIONAL_VERSION_KEY && note.source !== 'devotional') continue;
+      (map[key] ??= []).push({
+        id: note.id,
+        noteText: note.noteText,
+        color: note.color,
+        source: note.source,
+      });
+    }
+    return map;
+  } catch {
+    return {};
+  }
+}
+
 function ReadingItem({
   reading,
   checked,
@@ -73,7 +120,12 @@ function ReadingItem({
   disabled?: boolean;
 }) {
   const [status, setStatus] = useState<ReadingItemUIState>('idle');
-  const [text, setText] = useState<string | null>(null);
+  const [bibleReading, setBibleReading] = useState<BibleReading | null>(null);
+  const [notesMap, setNotesMap] = useState<Record<string, VerseNoteEntry[]>>({});
+  const [activeVerse, setActiveVerse] = useState<{ chapter: number; verse: number } | null>(null);
+
+  const activeKey = activeVerse ? verseKey(activeVerse.chapter, activeVerse.verse) : null;
+  const activeNotes = activeKey ? (notesMap[activeKey] ?? []) : [];
 
   function handleCheckClick() {
     if (disabled) {
@@ -94,14 +146,59 @@ function ReadingItem({
     setStatus('loading');
     try {
       const data = await fetchBibleReading(`${reading.bookAbbr} ${reading.reference}`);
-      const formatted = data.chapters
-        .flatMap((ch) => ch.verses)
-        .map((v) => `${v.number} ${v.text}`)
-        .join('\n');
-      setText(formatted);
+      if (!bibleReading) setNotesMap(await fetchReadingNotes(data));
+      setBibleReading(data);
       setStatus('open');
     } catch {
       setStatus('error');
+    }
+  }
+
+  async function saveNote(noteText: string, color: string): Promise<boolean> {
+    if (!bibleReading || !activeVerse || !activeKey) return false;
+    try {
+      const res = await fetch('/api/bible/notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bookKey: bibleReading.bibleKey,
+          chapter: activeVerse.chapter,
+          verse: activeVerse.verse,
+          versionKey: DEVOTIONAL_VERSION_KEY,
+          noteText,
+          color,
+          source: 'devotional',
+        }),
+      });
+      const data = (await res.json()) as ApiResponse<VerseNote>;
+      if (!res.ok || !data.success) throw new Error();
+      const { id, color: savedColor, source } = data.data;
+      setNotesMap((prev) => ({
+        ...prev,
+        [activeKey]: [
+          ...(prev[activeKey] ?? []),
+          { id, noteText: data.data.noteText, color: savedColor, source },
+        ],
+      }));
+      toast.success('Nota guardada');
+      return true;
+    } catch {
+      toast.error('No se pudo guardar la nota');
+      return false;
+    }
+  }
+
+  async function deleteNote(noteId: string) {
+    if (!activeKey) return;
+    try {
+      const res = await fetch(`/api/bible/notes/${noteId}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error();
+      setNotesMap((prev) => ({
+        ...prev,
+        [activeKey]: (prev[activeKey] ?? []).filter((n) => n.id !== noteId),
+      }));
+    } catch {
+      toast.error('No se pudo borrar la nota');
     }
   }
 
@@ -166,7 +263,7 @@ function ReadingItem({
       </div>
 
       <AnimatePresence initial={false}>
-        {status === 'open' && text && (
+        {status === 'open' && bibleReading && (
           <motion.div
             key="text"
             initial={{ height: 0, opacity: 0 }}
@@ -175,17 +272,58 @@ function ReadingItem({
             transition={{ duration: 0.22 }}
             className="overflow-hidden"
           >
-            <p className="text-foreground px-4 pt-2 pb-2 text-sm leading-relaxed whitespace-pre-wrap">
-              {text.split(/(\d+\s)/).map((part, i) =>
-                /^\d+\s$/.test(part) ? (
-                  <span key={i} className="text-foreground/80 font-bold dark:text-white">
-                    {part}
-                  </span>
-                ) : (
-                  part
-                ),
-              )}
-            </p>
+            <div className="text-foreground px-4 pt-2 pb-2 text-sm leading-relaxed">
+              <p className="text-muted mb-1.5 flex items-center gap-1 text-[11px]">
+                <NotebookPen size={12} />
+                Toca un versículo para agregar una nota
+              </p>
+              {bibleReading.chapters.map((ch) => (
+                <div key={ch.number}>
+                  {bibleReading.chapters.length > 1 && (
+                    <p className="text-primary mt-2 mb-1 text-xs font-bold">Capítulo {ch.number}</p>
+                  )}
+                  {ch.verses.map((v) => {
+                    const notes = notesMap[verseKey(ch.number, v.number)] ?? [];
+                    const highlight = notes[notes.length - 1]?.color;
+                    return (
+                      <p
+                        key={v.number}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => setActiveVerse({ chapter: ch.number, verse: v.number })}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setActiveVerse({ chapter: ch.number, verse: v.number });
+                          }
+                        }}
+                        className="-mx-1 cursor-pointer rounded-md px-1"
+                        style={
+                          highlight ? { backgroundColor: highlight, color: '#000' } : undefined
+                        }
+                      >
+                        <span
+                          className={cn(
+                            'font-bold',
+                            highlight ? 'text-black/70' : 'text-foreground/80 dark:text-white',
+                          )}
+                        >
+                          {v.number}{' '}
+                        </span>
+                        {v.text}
+                        {notes.length > 0 && (
+                          <NotebookPen
+                            size={12}
+                            aria-label={`${notes.length} nota(s)`}
+                            className="ml-1 inline align-baseline text-black/60"
+                          />
+                        )}
+                      </p>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
           </motion.div>
         )}
         {status === 'error' && (
@@ -200,6 +338,55 @@ function ReadingItem({
           </motion.p>
         )}
       </AnimatePresence>
+
+      {/* Solo existe tras abrir la lectura (en el cliente), así que el portal no afecta la hidratación */}
+      {bibleReading &&
+        createPortal(
+          <AnimatePresence>
+            {activeVerse && (
+              <>
+                <motion.div
+                  key="backdrop"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => setActiveVerse(null)}
+                  className="fixed inset-0 z-69 bg-black/30"
+                />
+                <motion.div
+                  key="sheet"
+                  initial={{ y: '100%' }}
+                  animate={{ y: 0 }}
+                  exit={{ y: '100%' }}
+                  transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+                  className="bg-surface fixed inset-x-0 bottom-0 z-70 rounded-t-3xl px-5 pt-4 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] shadow-2xl"
+                >
+                  <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-gray-300 dark:bg-gray-700" />
+                  <div className="mb-4 flex items-center justify-between">
+                    <h2 className="text-base font-bold">
+                      {bibleReading.bookName} {activeVerse.chapter}:{activeVerse.verse}
+                    </h2>
+                    <button
+                      type="button"
+                      onClick={() => setActiveVerse(null)}
+                      aria-label="Cerrar"
+                      className="text-muted"
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
+                  <VerseNotesPanel
+                    key={activeKey}
+                    notes={activeNotes}
+                    onSave={saveNote}
+                    onDelete={deleteNote}
+                  />
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>,
+          document.body,
+        )}
     </div>
   );
 }

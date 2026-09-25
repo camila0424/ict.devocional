@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { parseReference, type BibleReading } from '@/lib/bible-books';
+import { getCanonicalBookKey } from '@/lib/bible-reader';
 
 export async function GET(req: NextRequest) {
   const ref = new URL(req.url).searchParams.get('ref');
@@ -10,7 +11,8 @@ export async function GET(req: NextRequest) {
     );
   try {
     const { bookKey, bookName, chapters } = parseReference(ref);
-    const data: BibleReading = { reference: ref, bookKey, bookName, chapters };
+    const bibleKey = getCanonicalBookKey(bookKey) ?? bookKey;
+    const data: BibleReading = { reference: ref, bookKey, bibleKey, bookName, chapters };
     return Response.json(
       { success: true, data },
       {

@@ -51,7 +51,12 @@ export default async function BibleSavedPage() {
   for (const note of notes) {
     const key = keyFor(note.bookKey, note.chapter, note.verse, note.versionKey);
     const existing = entries.get(key);
-    const noteEntry = { id: note.id, noteText: note.noteText, color: note.color };
+    const noteEntry = {
+      id: note.id,
+      noteText: note.noteText,
+      color: note.color,
+      source: note.source,
+    };
     if (existing) {
       existing.notes.push(noteEntry);
       existing.latestActivity = Math.max(existing.latestActivity, note.createdAt.getTime());

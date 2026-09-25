@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Heart, Trash2 } from 'lucide-react';
+import { ArrowLeft, Heart } from 'lucide-react';
+import { NoteCard, type VerseNoteEntry } from '@/components/bible/VerseNotesPanel';
 
 export type SavedEntry = {
   key: string;
@@ -13,7 +14,7 @@ export type SavedEntry = {
   versionKey: string;
   text: string;
   savedId: string | null;
-  notes: { id: string; noteText: string; color: string }[];
+  notes: VerseNoteEntry[];
   latestActivity: number;
 };
 
@@ -126,22 +127,12 @@ export function BibleSavedClient({ entries: initialEntries }: Props) {
                 {entry.notes.length > 0 && (
                   <div className="flex flex-col gap-1.5">
                     {entry.notes.map((note) => (
-                      <div
+                      <NoteCard
                         key={note.id}
-                        className="flex items-start justify-between gap-2 rounded-xl p-2.5"
-                        style={{ backgroundColor: note.color }}
-                      >
-                        <p className="text-sm break-words text-black">{note.noteText}</p>
-                        <button
-                          type="button"
-                          onClick={(e) => deleteNote(entry, note.id, e)}
-                          disabled={busyId === note.id}
-                          aria-label="Borrar nota"
-                          className="shrink-0 text-black/50 hover:text-black/80 disabled:opacity-40"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
+                        note={note}
+                        onDelete={(e) => deleteNote(entry, note.id, e)}
+                        deleting={busyId === note.id}
+                      />
                     ))}
                   </div>
                 )}

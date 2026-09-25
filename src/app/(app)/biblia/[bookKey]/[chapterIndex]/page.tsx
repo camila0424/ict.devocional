@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { getBibleBooks, getChapter, getChapterCount, type BibleVersion } from '@/lib/bible-reader';
 import { parseVerseParam } from '@/lib/bible-verse-range';
 import { ChapterReaderClient } from '@/components/bible/ChapterReaderClient';
+import type { VerseNoteEntry } from '@/components/bible/VerseNotesPanel';
 
 export default async function BibleChapterPage({
   params,
@@ -42,20 +43,27 @@ export default async function BibleChapterPage({
       where: { userId: session.user.id, bookKey, chapter, versionKey: bibleVersion },
       select: { id: true, verse: true },
     }),
+    // Las notas del devocional se ven en cualquier versión, aunque se escribieran sobre RVR1960
     prisma.verseNote.findMany({
-      where: { userId: session.user.id, bookKey, chapter, versionKey: bibleVersion },
-      select: { id: true, verse: true, noteText: true, color: true },
+      where: {
+        userId: session.user.id,
+        bookKey,
+        chapter,
+        OR: [{ versionKey: bibleVersion }, { source: 'devotional' }],
+      },
+      select: { id: true, verse: true, noteText: true, color: true, source: true },
       orderBy: { createdAt: 'asc' },
     }),
   ]);
 
   const savedMap = Object.fromEntries(savedVerses.map((v) => [v.verse, v.id]));
-  const notesMap: Record<number, { id: string; noteText: string; color: string }[]> = {};
+  const notesMap: Record<number, VerseNoteEntry[]> = {};
   for (const note of notes) {
     (notesMap[note.verse] ??= []).push({
       id: note.id,
       noteText: note.noteText,
       color: note.color,
+      source: note.source,
     });
   }
 

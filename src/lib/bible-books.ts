@@ -12,6 +12,8 @@ export interface BibleChapter {
 export interface BibleReading {
   reference: string;
   bookKey: string;
+  // bookKey canónico del lector de la Biblia (el de arriba es el nombre del archivo RVR1960)
+  bibleKey: string;
   bookName: string;
   chapters: BibleChapter[];
 }

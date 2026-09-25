@@ -198,6 +198,8 @@ model VerseNote {
   versionKey String   @map("version_key")
   noteText   String   @map("note_text") @db.Text
   color      String   @default("#FDE68A")
+  // "bible" si se escribió en el lector de la Biblia, "devotional" si en una lectura del devocional
+  source     String   @default("bible")
   updatedAt  DateTime @updatedAt @map("updated_at")
   createdAt  DateTime @default(now()) @map("created_at")
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)

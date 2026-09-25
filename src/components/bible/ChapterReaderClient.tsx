@@ -14,19 +14,15 @@ import {
   Image as ImageIcon,
   ChevronLeft,
   ChevronRight,
-  Trash2,
-  Plus,
   X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatVerseParam } from '@/lib/bible-verse-range';
-import { PASTEL_COLORS } from '@/lib/note-colors';
 import { VersionSwitcher } from '@/components/bible/VersionSwitcher';
+import { VerseNotesPanel, type VerseNoteEntry } from '@/components/bible/VerseNotesPanel';
 import type { BibleVersion } from '@/lib/bible-reader';
 import type { ApiResponse } from '@/types/api';
 import type { SavedVerse, VerseNote } from '@prisma/client';
-
-type VerseNoteEntry = { id: string; noteText: string; color: string };
 
 type Props = {
   bookKey: string;
@@ -55,13 +51,9 @@ export function ChapterReaderClient({
   const chapterTitle = `${bookName} ${chapterIndex + 1}`;
 
   const [selectedNumbers, setSelectedNumbers] = useState<number[]>(initialVerses);
-  const [sheetView, setSheetView] = useState<'actions' | 'note' | 'view-notes'>('actions');
+  const [sheetView, setSheetView] = useState<'actions' | 'notes'>('actions');
   const [savedMap, setSavedMap] = useState(initialSavedMap);
   const [notesMap, setNotesMap] = useState(initialNotesMap);
-  const [noteDraft, setNoteDraft] = useState('');
-  const [noteColor, setNoteColor] = useState<string>(PASTEL_COLORS[0]);
-  const [savingNote, setSavingNote] = useState(false);
-  const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
   const [togglingSave, setTogglingSave] = useState(false);
   const didScrollToInitial = useRef(false);
 
@@ -95,18 +87,12 @@ export function ChapterReaderClient({
 
   function openNotesFor(verseNumber: number) {
     setSelectedNumbers([verseNumber]);
-    setSheetView('view-notes');
+    setSheetView('notes');
   }
 
   function closeSheet() {
     setSelectedNumbers([]);
     setSheetView('actions');
-  }
-
-  function startNewNote() {
-    setNoteDraft('');
-    setNoteColor(PASTEL_COLORS[0]);
-    setSheetView('note');
   }
 
   async function toggleSaved() {
@@ -150,12 +136,9 @@ export function ChapterReaderClient({
     }
   }
 
-  async function saveNote() {
-    if (activeVerseNumber === undefined) return;
+  async function saveNote(noteText: string, color: string): Promise<boolean> {
+    if (activeVerseNumber === undefined) return false;
     const chapter = chapterIndex + 1;
-    const text = noteDraft.trim();
-    if (!text) return;
-    setSavingNote(true);
     try {
       const res = await fetch('/api/bible/notes', {
         method: 'POST',
@@ -165,8 +148,8 @@ export function ChapterReaderClient({
           chapter,
           verse: activeVerseNumber,
           versionKey: version,
-          noteText: text,
-          color: noteColor,
+          noteText,
+          color,
         }),
       });
       const data = (await res.json()) as ApiResponse<VerseNote>;
@@ -176,22 +159,25 @@ export function ChapterReaderClient({
         const existing = next[activeVerseNumber] ?? [];
         next[activeVerseNumber] = [
           ...existing,
-          { id: data.data.id, noteText: data.data.noteText, color: data.data.color },
+          {
+            id: data.data.id,
+            noteText: data.data.noteText,
+            color: data.data.color,
+            source: data.data.source,
+          },
         ];
         return next;
       });
       toast.success('Nota guardada');
-      setSheetView('view-notes');
+      return true;
     } catch {
       toast.error('No se pudo guardar la nota');
-    } finally {
-      setSavingNote(false);
+      return false;
     }
   }
 
   async function deleteNote(noteId: string) {
     if (activeVerseNumber === undefined) return;
-    setDeletingNoteId(noteId);
     try {
       const res = await fetch(`/api/bible/notes/${noteId}`, { method: 'DELETE' });
       if (!res.ok) throw new Error();
@@ -202,8 +188,6 @@ export function ChapterReaderClient({
       });
     } catch {
       toast.error('No se pudo borrar la nota');
-    } finally {
-      setDeletingNoteId(null);
     }
   }
 
@@ -426,7 +410,7 @@ export function ChapterReaderClient({
                   </button>
                   <button
                     type="button"
-                    onClick={() => isSingleSelection && setSheetView('view-notes')}
+                    onClick={() => isSingleSelection && setSheetView('notes')}
                     disabled={!isSingleSelection}
                     className="flex flex-col items-center gap-1.5 rounded-2xl py-3 disabled:opacity-30"
                   >
@@ -458,88 +442,13 @@ export function ChapterReaderClient({
               </>
             )}
 
-            {sheetView === 'view-notes' && (
-              <div className="flex flex-col gap-3">
-                {activeVerseNotes.length === 0 ? (
-                  <p className="text-muted text-center text-sm">
-                    Aún no hay notas en este versículo
-                  </p>
-                ) : (
-                  <div className="flex max-h-64 flex-col gap-2 overflow-y-auto">
-                    {activeVerseNotes.map((note) => (
-                      <div
-                        key={note.id}
-                        className="flex items-start justify-between gap-2 rounded-xl p-3"
-                        style={{ backgroundColor: note.color }}
-                      >
-                        <p className="text-sm break-words text-black">{note.noteText}</p>
-                        <button
-                          type="button"
-                          onClick={() => deleteNote(note.id)}
-                          disabled={deletingNoteId === note.id}
-                          aria-label="Borrar nota"
-                          className="shrink-0 text-black/50 hover:text-black/80 disabled:opacity-40"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <button
-                  type="button"
-                  onClick={startNewNote}
-                  className="border-border flex items-center justify-center gap-1.5 rounded-2xl border border-dashed py-3 text-sm font-semibold"
-                >
-                  <Plus size={16} />
-                  Agregar nota
-                </button>
-              </div>
-            )}
-
-            {sheetView === 'note' && (
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-center gap-2">
-                  {PASTEL_COLORS.map((color) => (
-                    <button
-                      key={color}
-                      type="button"
-                      aria-label="Elegir color"
-                      onClick={() => setNoteColor(color)}
-                      className={cn(
-                        'h-7 w-7 rounded-full border-2',
-                        noteColor === color ? 'border-black/60' : 'border-black/10',
-                      )}
-                      style={{ backgroundColor: color }}
-                    />
-                  ))}
-                </div>
-                <textarea
-                  value={noteDraft}
-                  onChange={(e) => setNoteDraft(e.target.value)}
-                  placeholder="Escribe tu nota..."
-                  rows={5}
-                  autoFocus
-                  className="bg-background border-border placeholder:text-muted focus:border-primary focus:ring-primary-light w-full resize-none rounded-xl border p-3 text-sm outline-none focus:ring-2"
-                />
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setSheetView('view-notes')}
-                    className="border-border flex-1 rounded-2xl border py-3 text-sm font-semibold"
-                  >
-                    Atrás
-                  </button>
-                  <button
-                    type="button"
-                    onClick={saveNote}
-                    disabled={savingNote || !noteDraft.trim()}
-                    className="bg-primary flex-1 rounded-2xl py-3 text-sm font-semibold text-white disabled:opacity-50"
-                  >
-                    {savingNote ? 'Guardando…' : 'Guardar nota'}
-                  </button>
-                </div>
-              </div>
+            {sheetView === 'notes' && (
+              <VerseNotesPanel
+                key={activeVerseNumber}
+                notes={activeVerseNotes}
+                onSave={saveNote}
+                onDelete={deleteNote}
+              />
             )}
           </motion.div>
         )}
