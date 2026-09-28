@@ -1,9 +1,14 @@
 import { NextResponse } from 'next/server';
 import { Prisma } from '@prisma/client';
-import { getDaysInMonth, subDays } from 'date-fns';
+import { addDays, format, getDaysInMonth, subDays } from 'date-fns';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
-import { refreshStreakOnLoad, getStreakDisplayState } from '@/lib/streak-engine';
+import {
+  refreshStreakOnLoad,
+  getStreakDisplayState,
+  getFrozenDates,
+  STREAK_GRACE_DAYS,
+} from '@/lib/streak-engine';
 import { shouldResetLevel } from '@/lib/level-engine';
 import { getMadridNow } from '@/lib/madrid-date';
 import type { ApiResponse } from '@/types/api';
@@ -41,28 +46,41 @@ export async function GET(
   todayUTC.setUTCHours(0, 0, 0, 0);
   const sevenDaysAgo = subDays(todayUTC, 6);
 
-  const [monthProgress, allTimeCount, rawStreak, last7Progress] = await Promise.all([
-    prisma.userProgress.findMany({
-      where: {
-        userId: session.user.id,
-        date: { gte: monthStart, lte: monthEnd },
-        completed: true,
-      },
-      select: { date: true },
-    }),
-    prisma.userProgress.count({
-      where: { userId: session.user.id, completed: true },
-    }),
-    prisma.streak.findUnique({ where: { userId: session.user.id } }),
-    prisma.userProgress.findMany({
-      where: {
-        userId: session.user.id,
-        date: { gte: sevenDaysAgo, lte: todayUTC },
-        completed: true,
-      },
-      select: { date: true },
-    }),
-  ]);
+  const [monthProgress, allTimeCount, rawStreak, last7Progress, aroundMonthProgress] =
+    await Promise.all([
+      prisma.userProgress.findMany({
+        where: {
+          userId: session.user.id,
+          date: { gte: monthStart, lte: monthEnd },
+          completed: true,
+        },
+        select: { date: true },
+      }),
+      prisma.userProgress.count({
+        where: { userId: session.user.id, completed: true },
+      }),
+      prisma.streak.findUnique({ where: { userId: session.user.id } }),
+      prisma.userProgress.findMany({
+        where: {
+          userId: session.user.id,
+          date: { gte: sevenDaysAgo, lte: todayUTC },
+          completed: true,
+        },
+        select: { date: true },
+      }),
+      // Unos días antes y después del mes, para saber si los huecos de los bordes rompieron la racha
+      prisma.userProgress.findMany({
+        where: {
+          userId: session.user.id,
+          date: {
+            gte: subDays(monthStart, STREAK_GRACE_DAYS + 1),
+            lte: addDays(monthEnd, STREAK_GRACE_DAYS + 1),
+          },
+          completed: true,
+        },
+        select: { date: true },
+      }),
+    ]);
 
   const madridNow = getMadridNow();
   const streakState = refreshStreakOnLoad(
@@ -131,6 +149,16 @@ export async function GET(
 
   const completedDays = monthProgress.map((p) => new Date(p.date).getUTCDate());
   const completedThisMonth = completedDays.length;
+
+  const madridToday = format(madridNow, 'yyyy-MM-dd');
+  const monthPrefix = monthStart.toISOString().slice(0, 7);
+  const frozenDates = getFrozenDates(
+    aroundMonthProgress.map((p) => new Date(p.date).toISOString().slice(0, 10)),
+    madridToday,
+  )
+    .filter((d) => d.startsWith(monthPrefix))
+    .map((d) => Number(d.slice(8, 10)));
+
   const percentageMonth = Math.round((completedThisMonth / daysInMonth) * 100);
 
   const completedLast7Set = new Set(
@@ -154,6 +182,7 @@ export async function GET(
       year,
       daysInMonth,
       completedDays,
+      frozenDates,
       streak: {
         current: streakState.current,
         best: streakState.best,

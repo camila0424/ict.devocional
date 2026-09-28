@@ -307,12 +307,21 @@ export function ChapterReaderClient({
                   'flex cursor-pointer items-start gap-1.5 rounded-lg px-2 py-1 text-left transition-colors',
                   isSelected &&
                     'bg-[var(--color-primary-light)] dark:bg-[var(--color-primary-dark)]/40',
+                  // Sobre el fondo pastel de una nota el texto va oscuro, también en modo oscuro
+                  !isSelected && highlightColor && 'text-indigo-950',
                 )}
                 style={
                   !isSelected && highlightColor ? { backgroundColor: highlightColor } : undefined
                 }
               >
-                <span className="text-muted mt-0.5 text-xs font-semibold">{verseNumber}</span>
+                <span
+                  className={cn(
+                    'mt-0.5 text-xs font-semibold',
+                    !isSelected && highlightColor ? 'text-indigo-900/70' : 'text-muted',
+                  )}
+                >
+                  {verseNumber}
+                </span>
                 <span className="flex-1 text-[18px] leading-loose">{text}</span>
                 {verseNotes.length > 0 && (
                   <button

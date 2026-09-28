@@ -29,13 +29,14 @@ export function TabBar() {
                 href={href}
                 className={cn(
                   'relative flex flex-col items-center gap-1 rounded-2xl py-2 text-xs font-medium transition-colors',
-                  active ? 'text-[var(--color-primary)]' : 'text-muted',
+                  // El azul de marca casi no se ve sobre el fondo oscuro: en dark va más claro
+                  active ? 'text-primary dark:text-blue-300' : 'text-muted',
                 )}
               >
                 {active && (
                   <motion.span
                     layoutId="tab-indicator"
-                    className="absolute inset-0 rounded-2xl bg-[var(--color-primary-light)] dark:bg-[var(--color-primary-dark)]/40"
+                    className="bg-primary-light absolute inset-0 rounded-2xl dark:bg-blue-500/20"
                     transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                   />
                 )}

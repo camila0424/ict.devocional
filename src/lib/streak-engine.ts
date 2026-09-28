@@ -26,6 +26,38 @@ export function getStreakDisplayState(
   return { state: 'lost', frozenDays: 0 };
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+const toDayIndex = (ymd: string) => Date.parse(`${ymd}T00:00:00Z`) / DAY_MS;
+const fromDayIndex = (idx: number) => new Date(idx * DAY_MS).toISOString().slice(0, 10);
+
+/**
+ * Días sin completar que no rompieron la racha ("congelados"), con la misma regla que
+ * recalculateStreak: un hueco de hasta STREAK_GRACE_DAYS días entre dos días completados, o
+ * los días ya pasados desde el último completado mientras la racha siga congelada.
+ * Fechas en formato YYYY-MM-DD; `today` no se marca porque aún se puede completar.
+ */
+export function getFrozenDates(completedDates: string[], today: string): string[] {
+  const days = [...new Set(completedDates)].map(toDayIndex).sort((a, b) => a - b);
+  const todayIdx = toDayIndex(today);
+  const frozen: string[] = [];
+
+  const addRange = (from: number, to: number) => {
+    for (let d = from; d <= to; d++) frozen.push(fromDayIndex(d));
+  };
+
+  for (let i = 1; i < days.length; i++) {
+    const missed = days[i]! - days[i - 1]! - 1;
+    if (missed > 0 && missed <= STREAK_GRACE_DAYS) addRange(days[i - 1]! + 1, days[i]! - 1);
+  }
+
+  const last = days[days.length - 1];
+  if (last !== undefined && last < todayIdx && todayIdx - last <= STREAK_GRACE_DAYS) {
+    addRange(last + 1, todayIdx - 1);
+  }
+
+  return frozen;
+}
+
 /**
  * Calcula el nuevo estado de racha cuando el usuario completa el devocional.
  * Reglas MVP (gracia de UN día):

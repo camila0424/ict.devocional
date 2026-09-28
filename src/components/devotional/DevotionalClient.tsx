@@ -238,26 +238,29 @@ function ReadingItem({
           onClick={toggle}
           className={cn(
             'flex flex-1 items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-opacity active:opacity-70',
-            checked ? 'bg-green-100/80 dark:bg-green-900/20' : 'bg-primary-light',
+            // En modo oscuro: fondo oscuro con letras blancas en vez del azul claro
+            checked
+              ? 'bg-green-100/80 dark:bg-green-900/30'
+              : 'bg-primary-light dark:bg-blue-500/20',
           )}
         >
-          <span className="bg-primary flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white">
+          <span className="bg-primary flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white dark:bg-blue-500">
             {reading.order}
           </span>
           <span
             className={cn(
-              'text-primary-dark flex-1 font-semibold',
-              checked && 'line-through opacity-50',
+              'text-primary-dark flex-1 font-semibold dark:text-white',
+              checked && 'line-through opacity-50 dark:text-green-100 dark:opacity-70',
             )}
           >
             {reading.bookFull} {reading.reference}
           </span>
           {status === 'loading' ? (
-            <Loader2 size={14} className="text-muted shrink-0 animate-spin" />
+            <Loader2 size={14} className="text-muted shrink-0 animate-spin dark:text-white/70" />
           ) : status === 'open' ? (
-            <ChevronUp size={14} className="text-muted shrink-0" />
+            <ChevronUp size={14} className="text-muted shrink-0 dark:text-white/70" />
           ) : (
-            <ChevronDown size={14} className="text-muted shrink-0" />
+            <ChevronDown size={14} className="text-muted shrink-0 dark:text-white/70" />
           )}
         </button>
       </div>
@@ -297,15 +300,16 @@ function ReadingItem({
                             setActiveVerse({ chapter: ch.number, verse: v.number });
                           }
                         }}
-                        className="-mx-1 cursor-pointer rounded-md px-1"
-                        style={
-                          highlight ? { backgroundColor: highlight, color: '#000' } : undefined
-                        }
+                        className={cn(
+                          '-mx-1 cursor-pointer rounded-md px-1',
+                          highlight && 'text-indigo-950',
+                        )}
+                        style={highlight ? { backgroundColor: highlight } : undefined}
                       >
                         <span
                           className={cn(
                             'font-bold',
-                            highlight ? 'text-black/70' : 'text-foreground/80 dark:text-white',
+                            highlight ? 'text-indigo-900/80' : 'text-foreground/80 dark:text-white',
                           )}
                         >
                           {v.number}{' '}
@@ -315,7 +319,7 @@ function ReadingItem({
                           <NotebookPen
                             size={12}
                             aria-label={`${notes.length} nota(s)`}
-                            className="ml-1 inline align-baseline text-black/60"
+                            className="ml-1 inline align-baseline text-indigo-900/70"
                           />
                         )}
                       </p>

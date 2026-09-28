@@ -16,6 +16,8 @@ type Props = {
   year: number;
   daysInMonth: number;
   completedDays: number[];
+  // Días sin completar que no rompieron la racha: se pintan como hielo
+  frozenDays?: number[];
   currentDay?: number;
   withLinks?: boolean;
 };
@@ -25,6 +27,7 @@ export function MonthCalendar({
   year,
   daysInMonth,
   completedDays,
+  frozenDays = [],
   currentDay,
   withLinks = false,
 }: Props) {
@@ -56,18 +59,26 @@ export function MonthCalendar({
         ))}
         {days.map((d) => {
           const done = completedDays.includes(d);
+          const frozen = !done && frozenDays.includes(d);
           const isToday = d === currentDay;
           const cell = (
             <motion.div
               whileTap={{ scale: 0.85 }}
+              title={frozen ? 'Día congelado: tu racha sigue viva' : undefined}
               className={cn(
-                'flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold transition-colors',
+                'relative flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold transition-colors',
                 done && 'bg-[var(--color-success)] text-white',
-                isToday && !done && 'bg-[var(--color-primary)] text-white',
-                !isToday && !done && 'text-muted hover:bg-border',
+                frozen && 'border border-sky-300 bg-sky-100 text-sky-800',
+                isToday && !done && !frozen && 'bg-[var(--color-primary)] text-white',
+                !isToday && !done && !frozen && 'text-muted hover:bg-border',
               )}
             >
               {d}
+              {frozen && (
+                <span aria-hidden className="absolute -top-1.5 -right-1.5 text-[11px] leading-none">
+                  ❄️
+                </span>
+              )}
             </motion.div>
           );
 

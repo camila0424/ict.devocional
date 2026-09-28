@@ -3,7 +3,33 @@ import {
   computeStreakOnComplete,
   refreshStreakOnLoad,
   getStreakDisplayState,
+  getFrozenDates,
 } from './streak-engine';
+
+describe('getFrozenDates', () => {
+  it('marca un hueco dentro de la gracia entre dos días completados', () => {
+    expect(getFrozenDates(['2026-09-25', '2026-09-27'], '2026-09-28')).toEqual(['2026-09-26']);
+  });
+
+  it('marca huecos de hasta 2 días y no los más largos', () => {
+    expect(getFrozenDates(['2026-09-01', '2026-09-04', '2026-09-08'], '2026-09-08')).toEqual([
+      '2026-09-02',
+      '2026-09-03',
+    ]);
+  });
+
+  it('marca los días pasados desde el último completado mientras la racha sigue congelada', () => {
+    expect(getFrozenDates(['2026-09-26'], '2026-09-28')).toEqual(['2026-09-27']);
+  });
+
+  it('no marca nada tras el último completado si la racha ya se perdió', () => {
+    expect(getFrozenDates(['2026-09-20'], '2026-09-28')).toEqual([]);
+  });
+
+  it('cruza el cambio de mes', () => {
+    expect(getFrozenDates(['2026-09-30', '2026-10-02'], '2026-10-05')).toEqual(['2026-10-01']);
+  });
+});
 
 describe('streak-engine', () => {
   it('inicia en 1 si nunca completó', () => {

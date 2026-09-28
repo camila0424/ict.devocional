@@ -209,6 +209,7 @@ export default function ProgressPage() {
           year={CURRENT_YEAR}
           daysInMonth={data.daysInMonth}
           completedDays={data.completedDays}
+          frozenDays={data.frozenDates}
           currentDay={TODAY}
           withLinks
         />

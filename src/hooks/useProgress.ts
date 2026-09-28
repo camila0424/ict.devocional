@@ -8,6 +8,8 @@ export type ProgressData = {
   year: number;
   daysInMonth: number;
   completedDays: number[];
+  // Días del mes que no se completaron pero no rompieron la racha
+  frozenDates: number[];
   streak: {
     current: number;
     best: number;
