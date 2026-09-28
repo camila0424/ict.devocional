@@ -146,6 +146,7 @@ export const ICT_TO_KEY: Record<string, string> = {
   Hb: 'hebreos',
   St: 'santiago',
   Jds: 'judas',
+  Judas: 'judas', // el plan de sept. 2026 escribe el nombre completo
 };
 
 export const KEY_TO_NAME: Record<string, string> = {
@@ -217,20 +218,26 @@ export const KEY_TO_NAME: Record<string, string> = {
   apocalipsis: 'Apocalipsis',
 };
 
-// Parsea "He 14", "He 15:1-21", "Jos 23-24", "Jue 10:1-11:33", "1 Sam 1:1-2:11"
+// Parsea "He 14", "He 15:1-21", "Jos 23-24", "Jue 10:1-11:33", "1 Sam 1:1-2:11",
+// "1 Cró 20-22:1" y el libro solo ("2 Jn", "Abd"), que el plan usa para libros de un capítulo
 export function parseReference(fullRef: string): {
   bookKey: string;
   bookName: string;
   chapters: BibleChapter[];
 } {
-  const match = fullRef.trim().match(/^(\d+\s+[A-Za-zÀ-ÿ]+|[A-Za-zÀ-ÿ]+)\s+(.+)$/);
+  // El plan de 2024 trae a veces la abreviatura pegada al capítulo: "2 Sam16", "1 Sam17:55-18:30"
+  const normalized = fullRef.trim().replace(/([A-Za-zÀ-ÿ])(\d)/, '$1 $2');
+  const match = normalized.match(/^(\d+\s+[A-Za-zÀ-ÿ]+|[A-Za-zÀ-ÿ]+)(?:\s+(.+))?$/);
   if (!match) throw new Error(`Referencia inválida: "${fullRef}"`);
   const [, abbr, ref] = match;
   const bookKey = ICT_TO_KEY[abbr!];
   if (!bookKey) throw new Error(`Abreviatura no reconocida: "${abbr}"`);
   const bookName = KEY_TO_NAME[bookKey] ?? bookKey;
   const bookData = loadBook(bookKey);
-  const chapters = buildSegments(ref!).map((seg) => ({
+  const segments: Seg[] = ref
+    ? buildSegments(ref)
+    : bookData.map((_, i) => ({ c: i + 1, v1: 1, v2: null }));
+  const chapters = segments.map((seg) => ({
     number: seg.c,
     verses: extractVerses(bookData, seg),
   }));
@@ -251,6 +258,16 @@ function buildSegments(ref: string): Seg[] {
     return Array.from({ length: c2! - c1! + 1 }, (_, i) => ({
       c: c1! + i,
       v1: c1! + i === c1 ? v1! : 1,
+      v2: c1! + i === c2 ? v2! : null,
+    }));
+  }
+  // "20-22:1" — capítulos completos hasta un versículo del último
+  const cr = ref.match(/^(\d+)-(\d+):(\d+)$/);
+  if (cr) {
+    const [, c1, c2, v2] = cr.map(Number);
+    return Array.from({ length: c2! - c1! + 1 }, (_, i) => ({
+      c: c1! + i,
+      v1: 1,
       v2: c1! + i === c2 ? v2! : null,
     }));
   }
