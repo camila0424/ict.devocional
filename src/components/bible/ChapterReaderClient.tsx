@@ -20,6 +20,7 @@ import { cn } from '@/lib/utils';
 import { formatVerseParam } from '@/lib/bible-verse-range';
 import { VersionSwitcher } from '@/components/bible/VersionSwitcher';
 import { VerseNotesPanel, type VerseNoteEntry } from '@/components/bible/VerseNotesPanel';
+import { CHAPTER_NOTE_TITLE, CHAPTER_NOTE_VERSE } from '@/lib/note-source';
 import type { BibleVersion } from '@/lib/bible-reader';
 import type { ApiResponse } from '@/types/api';
 import type { SavedVerse, VerseNote } from '@prisma/client';
@@ -55,6 +56,7 @@ export function ChapterReaderClient({
   const [savedMap, setSavedMap] = useState(initialSavedMap);
   const [notesMap, setNotesMap] = useState(initialNotesMap);
   const [togglingSave, setTogglingSave] = useState(false);
+  const [chapterNotesOpen, setChapterNotesOpen] = useState(false);
   const didScrollToInitial = useRef(false);
 
   const hasPrev = chapterIndex > 0;
@@ -65,8 +67,10 @@ export function ChapterReaderClient({
   const selectionLabel = hasSelection ? formatVerseParam(sortedSelected) : '';
   const allSelectedSaved = hasSelection && sortedSelected.every((n) => !!savedMap[n]);
   const activeVerseNumber = isSingleSelection ? sortedSelected[0] : undefined;
-  const activeVerseNotes =
-    activeVerseNumber !== undefined ? (notesMap[activeVerseNumber] ?? []) : [];
+  // A qué "versículo" van las notas del panel: el seleccionado, o 0 para el resumen del capítulo
+  const noteTarget = chapterNotesOpen ? CHAPTER_NOTE_VERSE : activeVerseNumber;
+  const targetNotes = noteTarget !== undefined ? (notesMap[noteTarget] ?? []) : [];
+  const chapterNotes = notesMap[CHAPTER_NOTE_VERSE] ?? [];
 
   useEffect(() => {
     if (didScrollToInitial.current) return;
@@ -79,6 +83,7 @@ export function ChapterReaderClient({
   }, []);
 
   function toggleVerse(verseNumber: number) {
+    setChapterNotesOpen(false);
     setSelectedNumbers((prev) =>
       prev.includes(verseNumber) ? prev.filter((n) => n !== verseNumber) : [...prev, verseNumber],
     );
@@ -86,11 +91,18 @@ export function ChapterReaderClient({
   }
 
   function openNotesFor(verseNumber: number) {
+    setChapterNotesOpen(false);
     setSelectedNumbers([verseNumber]);
     setSheetView('notes');
   }
 
+  function openChapterNotes() {
+    setSelectedNumbers([]);
+    setChapterNotesOpen(true);
+  }
+
   function closeSheet() {
+    setChapterNotesOpen(false);
     setSelectedNumbers([]);
     setSheetView('actions');
   }
@@ -137,7 +149,7 @@ export function ChapterReaderClient({
   }
 
   async function saveNote(noteText: string, color: string): Promise<boolean> {
-    if (activeVerseNumber === undefined) return false;
+    if (noteTarget === undefined) return false;
     const chapter = chapterIndex + 1;
     try {
       const res = await fetch('/api/bible/notes', {
@@ -146,7 +158,7 @@ export function ChapterReaderClient({
         body: JSON.stringify({
           bookKey,
           chapter,
-          verse: activeVerseNumber,
+          verse: noteTarget,
           versionKey: version,
           noteText,
           color,
@@ -156,8 +168,8 @@ export function ChapterReaderClient({
       if (!res.ok || !data.success) throw new Error();
       setNotesMap((prev) => {
         const next = { ...prev };
-        const existing = next[activeVerseNumber] ?? [];
-        next[activeVerseNumber] = [
+        const existing = next[noteTarget] ?? [];
+        next[noteTarget] = [
           ...existing,
           {
             id: data.data.id,
@@ -176,14 +188,40 @@ export function ChapterReaderClient({
     }
   }
 
+  async function updateNote(noteId: string, noteText: string, color: string): Promise<boolean> {
+    if (noteTarget === undefined) return false;
+    try {
+      const res = await fetch(`/api/bible/notes/${noteId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ noteText, color }),
+      });
+      const data = (await res.json()) as ApiResponse<VerseNote>;
+      if (!res.ok || !data.success) throw new Error();
+      const updated = data.data;
+      setNotesMap((prev) => {
+        const next = { ...prev };
+        next[noteTarget] = (next[noteTarget] ?? []).map((n) =>
+          n.id === noteId ? { ...n, noteText: updated.noteText, color: updated.color } : n,
+        );
+        return next;
+      });
+      toast.success('Nota actualizada');
+      return true;
+    } catch {
+      toast.error('No se pudo actualizar la nota');
+      return false;
+    }
+  }
+
   async function deleteNote(noteId: string) {
-    if (activeVerseNumber === undefined) return;
+    if (noteTarget === undefined) return;
     try {
       const res = await fetch(`/api/bible/notes/${noteId}`, { method: 'DELETE' });
       if (!res.ok) throw new Error();
       setNotesMap((prev) => {
         const next = { ...prev };
-        next[activeVerseNumber] = (next[activeVerseNumber] ?? []).filter((n) => n.id !== noteId);
+        next[noteTarget] = (next[noteTarget] ?? []).filter((n) => n.id !== noteId);
         return next;
       });
     } catch {
@@ -346,6 +384,29 @@ export function ChapterReaderClient({
             );
           })}
         </div>
+
+        {/* Resumen del capítulo */}
+        <div className="mt-6 flex flex-col gap-2">
+          {chapterNotes.map((note) => (
+            <button
+              key={note.id}
+              type="button"
+              onClick={openChapterNotes}
+              className="rounded-xl p-3 text-left text-sm break-words whitespace-pre-line text-black"
+              style={{ backgroundColor: note.color }}
+            >
+              {note.noteText}
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={openChapterNotes}
+            className="border-border flex items-center justify-center gap-1.5 rounded-2xl border border-dashed py-3 text-sm font-semibold"
+          >
+            <NotebookPen size={16} />
+            {chapterNotes.length > 0 ? CHAPTER_NOTE_TITLE : 'Escribir resumen del capítulo'}
+          </button>
+        </div>
       </div>
 
       {/* Navegación de capítulo */}
@@ -379,7 +440,7 @@ export function ChapterReaderClient({
 
       {/* Bottom sheet */}
       <AnimatePresence>
-        {hasSelection && (
+        {(hasSelection || chapterNotesOpen) && (
           <motion.div
             key="sheet"
             initial={{ y: '100%' }}
@@ -391,14 +452,16 @@ export function ChapterReaderClient({
             <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-gray-300 dark:bg-gray-700" />
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-base font-bold">
-                {bookName} {chapterIndex + 1}:{selectionLabel}
+                {chapterNotesOpen
+                  ? `${chapterTitle} · ${CHAPTER_NOTE_TITLE}`
+                  : `${bookName} ${chapterIndex + 1}:${selectionLabel}`}
               </h2>
               <button type="button" onClick={closeSheet} aria-label="Cerrar" className="text-muted">
                 <X size={20} />
               </button>
             </div>
 
-            {sheetView === 'actions' && (
+            {sheetView === 'actions' && !chapterNotesOpen && (
               <>
                 <div className="grid grid-cols-4 gap-2">
                   <button
@@ -451,11 +514,12 @@ export function ChapterReaderClient({
               </>
             )}
 
-            {sheetView === 'notes' && (
+            {(sheetView === 'notes' || chapterNotesOpen) && (
               <VerseNotesPanel
-                key={activeVerseNumber}
-                notes={activeVerseNotes}
+                key={noteTarget}
+                notes={targetNotes}
                 onSave={saveNote}
+                onUpdate={updateNote}
                 onDelete={deleteNote}
               />
             )}

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { PASTEL_COLORS } from '@/lib/note-colors';
 import { DEVOTIONAL_NOTE_TITLE } from '@/lib/note-source';
@@ -11,10 +11,12 @@ export type VerseNoteEntry = { id: string; noteText: string; color: string; sour
 export function NoteCard({
   note,
   onDelete,
+  onEdit,
   deleting,
 }: {
   note: VerseNoteEntry;
   onDelete: (e: React.MouseEvent) => void;
+  onEdit?: (e: React.MouseEvent) => void;
   deleting: boolean;
 }) {
   return (
@@ -28,17 +30,30 @@ export function NoteCard({
             {DEVOTIONAL_NOTE_TITLE}
           </p>
         )}
-        <p className="text-sm break-words text-black">{note.noteText}</p>
+        <p className="text-sm break-words whitespace-pre-line text-black">{note.noteText}</p>
       </div>
-      <button
-        type="button"
-        onClick={onDelete}
-        disabled={deleting}
-        aria-label="Borrar nota"
-        className="shrink-0 text-black/50 hover:text-black/80 disabled:opacity-40"
-      >
-        <Trash2 size={16} />
-      </button>
+      <div className="flex shrink-0 items-center gap-3">
+        {onEdit && (
+          <button
+            type="button"
+            onClick={onEdit}
+            disabled={deleting}
+            aria-label="Editar nota"
+            className="text-black/50 hover:text-black/80 disabled:opacity-40"
+          >
+            <Pencil size={16} />
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={onDelete}
+          disabled={deleting}
+          aria-label="Borrar nota"
+          className="text-black/50 hover:text-black/80 disabled:opacity-40"
+        >
+          <Trash2 size={16} />
+        </button>
+      </div>
     </div>
   );
 }
@@ -46,20 +61,31 @@ export function NoteCard({
 type Props = {
   notes: VerseNoteEntry[];
   onSave: (noteText: string, color: string) => Promise<boolean>;
+  onUpdate: (noteId: string, noteText: string, color: string) => Promise<boolean>;
   onDelete: (noteId: string) => Promise<void>;
 };
 
-// Lista de notas de un versículo + editor para agregar una nueva
-export function VerseNotesPanel({ notes, onSave, onDelete }: Props) {
+// Lista de notas de un versículo + editor para agregar una nueva o editar una existente
+export function VerseNotesPanel({ notes, onSave, onUpdate, onDelete }: Props) {
   const [mode, setMode] = useState<'list' | 'edit'>('list');
+  // null = nota nueva; si no, el id de la nota que se está editando
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
   const [color, setColor] = useState<string>(PASTEL_COLORS[0]);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   function startNewNote() {
+    setEditingId(null);
     setDraft('');
     setColor(PASTEL_COLORS[0]);
+    setMode('edit');
+  }
+
+  function startEditNote(note: VerseNoteEntry) {
+    setEditingId(note.id);
+    setDraft(note.noteText);
+    setColor(note.color);
     setMode('edit');
   }
 
@@ -67,7 +93,7 @@ export function VerseNotesPanel({ notes, onSave, onDelete }: Props) {
     const text = draft.trim();
     if (!text) return;
     setSaving(true);
-    const ok = await onSave(text, color);
+    const ok = editingId ? await onUpdate(editingId, text, color) : await onSave(text, color);
     setSaving(false);
     if (ok) setMode('list');
   }
@@ -118,7 +144,7 @@ export function VerseNotesPanel({ notes, onSave, onDelete }: Props) {
             disabled={saving || !draft.trim()}
             className="bg-primary flex-1 rounded-2xl py-3 text-sm font-semibold text-white disabled:opacity-50"
           >
-            {saving ? 'Guardando…' : 'Guardar nota'}
+            {saving ? 'Guardando…' : editingId ? 'Guardar cambios' : 'Guardar nota'}
           </button>
         </div>
       </div>
@@ -135,6 +161,7 @@ export function VerseNotesPanel({ notes, onSave, onDelete }: Props) {
             <NoteCard
               key={note.id}
               note={note}
+              onEdit={() => startEditNote(note)}
               onDelete={() => remove(note.id)}
               deleting={deletingId === note.id}
             />

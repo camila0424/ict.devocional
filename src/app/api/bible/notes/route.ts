@@ -10,7 +10,8 @@ import type { VerseNote } from '@prisma/client';
 const noteSchema = z.object({
   bookKey: z.string().min(1),
   chapter: z.number().int().positive(),
-  verse: z.number().int().positive(),
+  // 0 = nota de todo el capítulo (CHAPTER_NOTE_VERSE)
+  verse: z.number().int().nonnegative(),
   versionKey: z.string().min(1),
   noteText: z.string().min(1),
   color: z.enum(PASTEL_COLORS).default(PASTEL_COLORS[0]),
@@ -31,7 +32,8 @@ export async function GET(request: Request): Promise<NextResponse<ApiResponse<Ve
 
   const notes = await prisma.verseNote.findMany({
     where: { userId: session.user.id, ...(bookKey ? { bookKey } : {}) },
-    orderBy: { updatedAt: 'desc' },
+    // Por fecha de creación: editar una nota no debe cambiar su posición en la lista
+    orderBy: { createdAt: 'desc' },
   });
 
   return NextResponse.json({ success: true, data: notes });

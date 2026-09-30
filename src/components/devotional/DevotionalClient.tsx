@@ -18,7 +18,7 @@ import { toast } from 'sonner';
 import type { VerseNote } from '@prisma/client';
 import { fetchBibleReading } from '@/services/bibleService';
 import type { BibleReading } from '@/lib/bible-books';
-import { DEVOTIONAL_VERSION_KEY } from '@/lib/note-source';
+import { CHAPTER_NOTE_TITLE, CHAPTER_NOTE_VERSE, DEVOTIONAL_VERSION_KEY } from '@/lib/note-source';
 import type { ApiResponse } from '@/types/api';
 import { VerseNotesPanel, type VerseNoteEntry } from '@/components/bible/VerseNotesPanel';
 
@@ -86,8 +86,12 @@ async function fetchReadingNotes(data: BibleReading): Promise<Record<string, Ver
     const json = (await res.json()) as ApiResponse<VerseNote[]>;
     if (!res.ok || !json.success) return {};
 
+    // Incluye el resumen de cada capítulo (versículo 0)
     const inReading = new Set(
-      data.chapters.flatMap((ch) => ch.verses.map((v) => verseKey(ch.number, v.number))),
+      data.chapters.flatMap((ch) => [
+        verseKey(ch.number, CHAPTER_NOTE_VERSE),
+        ...ch.verses.map((v) => verseKey(ch.number, v.number)),
+      ]),
     );
     const map: Record<string, VerseNoteEntry[]> = {};
     // La API las devuelve de la más reciente a la más antigua; las mostramos en orden de creación
@@ -184,6 +188,31 @@ function ReadingItem({
       return true;
     } catch {
       toast.error('No se pudo guardar la nota');
+      return false;
+    }
+  }
+
+  async function updateNote(noteId: string, noteText: string, color: string): Promise<boolean> {
+    if (!activeKey) return false;
+    try {
+      const res = await fetch(`/api/bible/notes/${noteId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ noteText, color }),
+      });
+      const data = (await res.json()) as ApiResponse<VerseNote>;
+      if (!res.ok || !data.success) throw new Error();
+      const updated = data.data;
+      setNotesMap((prev) => ({
+        ...prev,
+        [activeKey]: (prev[activeKey] ?? []).map((n) =>
+          n.id === noteId ? { ...n, noteText: updated.noteText, color: updated.color } : n,
+        ),
+      }));
+      toast.success('Nota actualizada');
+      return true;
+    } catch {
+      toast.error('No se pudo actualizar la nota');
       return false;
     }
   }
@@ -325,6 +354,23 @@ function ReadingItem({
                       </p>
                     );
                   })}
+                  {(() => {
+                    const chapterNotes = notesMap[verseKey(ch.number, CHAPTER_NOTE_VERSE)] ?? [];
+                    return (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setActiveVerse({ chapter: ch.number, verse: CHAPTER_NOTE_VERSE })
+                        }
+                        className="border-border text-muted mt-2 mb-1 flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed py-2 text-xs font-semibold"
+                      >
+                        <NotebookPen size={13} />
+                        {chapterNotes.length > 0
+                          ? `${CHAPTER_NOTE_TITLE} ${ch.number} (${chapterNotes.length})`
+                          : `Escribir resumen del capítulo ${ch.number}`}
+                      </button>
+                    );
+                  })()}
                 </div>
               ))}
             </div>
@@ -368,7 +414,9 @@ function ReadingItem({
                   <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-gray-300 dark:bg-gray-700" />
                   <div className="mb-4 flex items-center justify-between">
                     <h2 className="text-base font-bold">
-                      {bibleReading.bookName} {activeVerse.chapter}:{activeVerse.verse}
+                      {activeVerse.verse === CHAPTER_NOTE_VERSE
+                        ? `${bibleReading.bookName} ${activeVerse.chapter} · ${CHAPTER_NOTE_TITLE}`
+                        : `${bibleReading.bookName} ${activeVerse.chapter}:${activeVerse.verse}`}
                     </h2>
                     <button
                       type="button"
@@ -383,6 +431,7 @@ function ReadingItem({
                     key={activeKey}
                     notes={activeNotes}
                     onSave={saveNote}
+                    onUpdate={updateNote}
                     onDelete={deleteNote}
                   />
                 </motion.div>
@@ -518,32 +567,26 @@ export function DevotionalClient({ entry, initialResponse, initialStreak, canCom
   }, [progress, total, celebrated, entry.id, entry.dayNumber, canComplete]);
 
   async function handleShare() {
-    const dateLabel = entryDate.toLocaleDateString('es-ES', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    });
-    const readingsText = entry.readings.map((r) => `${r.bookFull} ${r.reference}`).join('\n');
-    const videoLink = videoId
-      ? `https://www.youtube.com/watch?v=${videoId}`
-      : 'Próximamente disponible';
+    const readingsText = entry.readings
+      .map((r) => `${r.bookFull} ${r.reference}`.trim())
+      .join('\n');
+    const videoLink = videoId ? `https://youtu.be/${videoId}` : 'Próximamente disponible';
 
-    const message = `Devocional ${dateLabel}
-
-Lecturas de hoy:
-${readingsText}
-
-Aplicación teoterápica con el líder Jimmy Chamorro:
+    // Negritas con un solo asterisco: es el formato de WhatsApp
+    const message = `🎧 *Teoterapia y Meditación*
 ${videoLink}
 
-Podcast de la semana con la líder Zaidy Mora:
-https://open.spotify.com/show/1Hd8DrkokBajPMo1gjlt5y
+📖 *Meditaciones Llamado a la confianza y En casa con Dios:*
 
-Reflexión diaria:
 https://www.facebook.com/share/19BeYgnnjj/
 
-Descarga nuestra aplicación y no te pierdas ningún detalle:
-https://ict-devocional.vercel.app`;
+📖🎧 *Pasajes Lectura Bíblica*
+
+Descarga la aplicación
+👇🏽
+https://ict-devocional.vercel.app
+
+${readingsText}`;
 
     if (navigator.share) {
       try {

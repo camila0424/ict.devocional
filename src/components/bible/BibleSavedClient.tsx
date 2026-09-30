@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Heart } from 'lucide-react';
 import { NoteCard, type VerseNoteEntry } from '@/components/bible/VerseNotesPanel';
+import { CHAPTER_NOTE_TITLE, CHAPTER_NOTE_VERSE } from '@/lib/note-source';
 
 export type SavedEntry = {
   key: string;
@@ -28,7 +29,8 @@ export function BibleSavedClient({ entries: initialEntries }: Props) {
   const [busyId, setBusyId] = useState<string | null>(null);
 
   function goToVerse(entry: SavedEntry) {
-    router.push(`/biblia/${entry.bookKey}/${entry.chapter - 1}?v=${entry.verse}`);
+    const base = `/biblia/${entry.bookKey}/${entry.chapter - 1}`;
+    router.push(entry.verse === CHAPTER_NOTE_VERSE ? base : `${base}?v=${entry.verse}`);
   }
 
   async function unsave(entry: SavedEntry, e: React.MouseEvent) {
@@ -103,7 +105,9 @@ export function BibleSavedClient({ entries: initialEntries }: Props) {
               >
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-sm font-bold">
-                    {entry.bookName} {entry.chapter}:{entry.verse}{' '}
+                    {entry.verse === CHAPTER_NOTE_VERSE
+                      ? `${entry.bookName} ${entry.chapter} · ${CHAPTER_NOTE_TITLE}`
+                      : `${entry.bookName} ${entry.chapter}:${entry.verse}`}{' '}
                     <span className="text-muted font-normal">({entry.versionKey})</span>
                   </p>
                   {entry.savedId && (
