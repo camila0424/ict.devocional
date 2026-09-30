@@ -6,9 +6,14 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Bookmark, ChevronDown, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { VersionSwitcher } from '@/components/bible/VersionSwitcher';
-import { BibleVerseResults, useBibleVerseSearch } from '@/components/bible/BibleVerseSearch';
+import {
+  BibleReferenceResult,
+  BibleVerseResults,
+  useBibleVerseSearch,
+} from '@/components/bible/BibleVerseSearch';
 import type { BibleBook, BibleVersion } from '@/lib/bible-reader';
 import { normalizeBibleText } from '@/lib/bible-search-text';
+import { parseBibleReference, referenceHref } from '@/lib/bible-reference-search';
 
 type BookWithChapters = BibleBook & { chapterCount: number };
 
@@ -84,7 +89,9 @@ export function BibleHomeClient({ bibleVersion, books }: Props) {
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const trimmedQuery = query.trim();
-  const verseSearch = useBibleVerseSearch(query, bibleVersion);
+  const reference = useMemo(() => parseBibleReference(query, books), [query, books]);
+  // Una referencia ("Salmos 145") no se busca como texto: lleva directo al capítulo
+  const verseSearch = useBibleVerseSearch(reference ? '' : query, bibleVersion);
 
   function toggleBook(key: string) {
     setExpandedKey((current) => (current === key ? null : key));
@@ -141,11 +148,17 @@ export function BibleHomeClient({ bibleVersion, books }: Props) {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Busca un libro, una palabra o pega un versículo..."
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && reference) router.push(referenceHref(reference));
+            }}
+            enterKeyHint="search"
+            placeholder="Busca un libro, una cita (Juan 3:16) o una palabra..."
             className="w-full bg-transparent text-sm outline-none"
           />
         </div>
       </motion.div>
+
+      {reference && <BibleReferenceResult reference={reference} />}
 
       {oldTestament.length > 0 && (
         <motion.div
@@ -207,6 +220,7 @@ export function BibleHomeClient({ bibleVersion, books }: Props) {
       )}
 
       {trimmedQuery.length >= 2 &&
+        !reference &&
         !verseSearch.loading &&
         verseSearch.results.length === 0 &&
         oldTestament.length === 0 &&

@@ -1,19 +1,31 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Search } from 'lucide-react';
 import type { BibleVersion } from '@/lib/bible-reader';
-import { BibleVerseResults, useBibleVerseSearch } from '@/components/bible/BibleVerseSearch';
+import {
+  BibleReferenceResult,
+  BibleVerseResults,
+  useBibleVerseSearch,
+} from '@/components/bible/BibleVerseSearch';
+import {
+  parseBibleReference,
+  referenceHref,
+  type ReferenceBook,
+} from '@/lib/bible-reference-search';
 
 type Props = {
   version: BibleVersion;
+  books: ReferenceBook[];
 };
 
-export function BibleSearchClient({ version }: Props) {
+export function BibleSearchClient({ version, books }: Props) {
   const router = useRouter();
   const [query, setQuery] = useState('');
-  const { results, resultsQuery, loading } = useBibleVerseSearch(query, version);
+  const reference = useMemo(() => parseBibleReference(query, books), [query, books]);
+  // Una referencia ("Salmos 145") no se busca como texto: lleva directo al capítulo
+  const { results, resultsQuery, loading } = useBibleVerseSearch(reference ? '' : query, version);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -37,18 +49,24 @@ export function BibleSearchClient({ version }: Props) {
             ref={inputRef}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Busca una palabra o pega un versículo..."
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && reference) router.push(referenceHref(reference));
+            }}
+            enterKeyHint="search"
+            placeholder="Busca una cita (Juan 3:16) o una palabra..."
             className="w-full bg-transparent text-sm outline-none"
           />
         </div>
       </div>
 
       <div className="flex-1 px-5 py-4">
-        {query.trim().length >= 2 && loading && (
+        {reference && <BibleReferenceResult reference={reference} />}
+
+        {!reference && query.trim().length >= 2 && loading && (
           <p className="text-muted text-center text-sm">Buscando…</p>
         )}
 
-        {query.trim().length >= 2 && !loading && results.length === 0 && (
+        {!reference && query.trim().length >= 2 && !loading && results.length === 0 && (
           <p className="text-muted text-center text-sm">Sin resultados para &quot;{query}&quot;</p>
         )}
 

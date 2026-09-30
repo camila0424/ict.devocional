@@ -2,8 +2,14 @@
 
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { BookOpen, ChevronRight } from 'lucide-react';
 import type { ApiResponse } from '@/types/api';
 import type { BibleSearchResult, BibleVersion } from '@/lib/bible-reader';
+import {
+  referenceHref,
+  referenceLabel,
+  type BibleReferenceMatch,
+} from '@/lib/bible-reference-search';
 import { contentStemsOf, normalizeBibleText, stem } from '@/lib/bible-search-text';
 
 // Busca versículos (palabra o fragmento) con debounce. Devuelve también la búsqueda que
@@ -46,6 +52,24 @@ export function useBibleVerseSearch(query: string, version: BibleVersion) {
   }, [query, version]);
 
   return { results, resultsQuery, loading };
+}
+
+// Acceso directo cuando la búsqueda es una referencia ("Salmos 145", "Juan 3:16").
+export function BibleReferenceResult({ reference }: { reference: BibleReferenceMatch }) {
+  const router = useRouter();
+  return (
+    <button
+      type="button"
+      onClick={() => router.push(referenceHref(reference))}
+      className="border-border bg-surface flex w-full items-center justify-between gap-3 rounded-2xl border p-4 text-left"
+    >
+      <span className="flex items-center gap-3">
+        <BookOpen size={18} className="shrink-0 text-[var(--color-primary)]" />
+        <span className="font-semibold">{referenceLabel(reference)}</span>
+      </span>
+      <ChevronRight size={18} className="text-muted shrink-0" />
+    </button>
+  );
 }
 
 // Resalta en el versículo las palabras que coinciden con la búsqueda.
