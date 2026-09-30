@@ -1,5 +1,6 @@
 import path from 'path';
 import { readFileSync } from 'fs';
+import { KEY_TO_NAME, resolveBookKey, splitReading } from './bible-book-aliases';
 
 export interface BibleVerse {
   number: number;
@@ -18,231 +19,24 @@ export interface BibleReading {
   chapters: BibleChapter[];
 }
 
-// Abreviaturas ICT → key del JSON
-export const ICT_TO_KEY: Record<string, string> = {
-  He: 'hebreos', // ICT usa "He" para Hebreos (feb); Hechos es "Hchs" (abr)
-  Salm: 'salmos', // ICT usa "Salm",  índice usa "Sal"
-  Rom: 'romanos', // ICT usa "Rom",   índice usa "Ro"
-  Rut: 'rut', // ICT usa "Rut",   índice usa "Rt"
-  '1 Sam': '1_samuel', // ICT usa "1 Sam", índice usa "1 S"
-  '2 Sam': '2_samuel', // ICT usa "2 Sam", índice usa "2 S"
-  Mar: 'marcos', // ICT usa "Mar",   índice usa "Mc"
-  Dan: 'daniel', // ICT usa "Dan",   índice usa "Dn"
-  Hag: 'hageo', // ICT usa "Hag",   índice usa "Hg"
-  Luc: 'lucas', // ICT usa "Luc",   índice usa "Lc"
-  Gén: 'genesis', // ICT usa "Gén",   índice usa "Gn"
-  Mat: 'mateo', // ICT usa "Mat",   índice usa "Mt"
-  Núm: 'numeros', // ICT usa "Núm",   índice usa "Nm"
-  Lev: 'levitico', // ICT usa "Lev",   índice usa "Lv"
-  Deut: 'deuteronomio', // ICT usa "Deut",  índice usa "Dt"
-  Hchs: 'hechos', // ICT usa "Hchs",  índice usa "Hch"
-  Ecl: 'eclesiastes', // ICT usa "Ecl",   índice usa "Ec"
-  Cant: 'cantares', // ICT usa "Cant",  índice usa "Cnt"
-  Prov: 'proverbios', // ICT usa "Prov",  índice usa "Pr"
-  '1 Cró': '1_cronicas', // ICT usa "1 Cró", índice usa "1 Cr"
-  '2 Cró': '2_cronicas', // ICT usa "2 Cró", índice usa "2 Cr"
-  Na: 'nahum', // ICT usa "Na",    índice usa "Nah"
-  Ag: 'hageo', // ICT usa "Ag",    índice usa "Hg"
-  Zc: 'zacarias', // ICT usa "Zc",    índice usa "Zac"
-  Apo: 'apocalipsis', // ICT usa "Apo",   índice usa "Ap"
-  Juan: 'juan', // ICT usa "Juan",  índice usa "Jn"
-  '1 Cor': '1_corintios', // ICT usa "1 Cor", índice usa "1 Co"
-  '2 Cor': '2_corintios', // ICT usa "2 Cor", índice usa "2 Co"
-  '2 Crón': '2_cronicas', // ICT usa "2 Crón" (variante de "2 Cró")
-  Éx: 'exodo', // ICT usa "Éx",    índice usa "Ex"
-  '1 Tes': '1_tesalonicenses', // ICT usa "1 Tes", índice usa "1 Ts"
-  '2 Tes': '2_tesalonicenses', // ICT usa "2 Tes", índice usa "2 Ts"
-  Gal: 'galatas', // ICT usa "Gal",  índice usa "Gl"
-  Re: '1_reyes', // ICT usa "Re",   índice usa "1 R"
-  '1 Re': '1_reyes', // ICT usa "1 Re", índice usa "1 R"
-  '2 Re': '2_reyes', // ICT usa "2 Re", índice usa "2 R"
-  // Resto coincide con el índice
-  Gn: 'genesis',
-  Ex: 'exodo',
-  Lv: 'levitico',
-  Nm: 'numeros',
-  Dt: 'deuteronomio',
-  Jos: 'josue',
-  Jue: 'jueces',
-  '1 S': '1_samuel',
-  '2 S': '2_samuel',
-  '1 R': '1_reyes',
-  '2 R': '2_reyes',
-  '1 Cr': '1_cronicas',
-  '2 Cr': '2_cronicas',
-  Esd: 'esdras',
-  Neh: 'nehemias',
-  Est: 'ester',
-  Job: 'job',
-  Sal: 'salmos',
-  Pr: 'proverbios',
-  Ec: 'eclesiastes',
-  Cnt: 'cantares',
-  Is: 'isaias',
-  Jer: 'jeremias',
-  Lm: 'lamentaciones',
-  Ez: 'ezequiel',
-  Dn: 'daniel',
-  Os: 'oseas',
-  Jl: 'joel',
-  Am: 'amos',
-  Abd: 'abdias',
-  Jon: 'jonas',
-  Miq: 'miqueas',
-  Nah: 'nahum',
-  Hab: 'habacuc',
-  Sof: 'sofonias',
-  Hg: 'hageo',
-  Zac: 'zacarias',
-  Mal: 'malaquias',
-  Mt: 'mateo',
-  Mc: 'marcos',
-  Lc: 'lucas',
-  Jn: 'juan',
-  Hch: 'hechos',
-  Ro: 'romanos',
-  '1 Co': '1_corintios',
-  '2 Co': '2_corintios',
-  Gl: 'galatas',
-  Ef: 'efesios',
-  Flp: 'filipenses',
-  Col: 'colosenses',
-  '1 Ts': '1_tesalonicenses',
-  '2 Ts': '2_tesalonicenses',
-  '1 Ti': '1_timoteo',
-  '2 Ti': '2_timoteo',
-  Tit: 'tito',
-  Flm: 'filemon',
-  Heb: 'hebreos',
-  Stg: 'santiago',
-  '1 P': '1_pedro',
-  '2 P': '2_pedro',
-  '1 Jn': '1_juan',
-  '2 Jn': '2_juan',
-  '3 Jn': '3_juan',
-  Jud: 'judas',
-  Ap: 'apocalipsis',
-  // Variantes de la lista alfabética / abreviaturas oficiales (ver Biblia Filament)
-  Jc: 'jueces',
-  '1 Sm': '1_samuel',
-  '2 Sm': '2_samuel',
-  Ne: 'nehemias',
-  Jb: 'job',
-  Ct: 'cantares',
-  Jr: 'jeremias',
-  Ab: 'abdias',
-  Mi: 'miqueas',
-  Ha: 'habacuc',
-  So: 'sofonias',
-  Za: 'zacarias',
-  Ml: 'malaquias',
-  Mr: 'marcos',
-  Rm: 'romanos',
-  Ga: 'galatas',
-  Fil: 'filipenses',
-  '1 Tm': '1_timoteo',
-  '2 Tm': '2_timoteo',
-  Tt: 'tito',
-  Hb: 'hebreos',
-  St: 'santiago',
-  Jds: 'judas',
-  Judas: 'judas', // el plan de sept. 2026 escribe el nombre completo
-  // Abreviaturas del plan de nov. 2026 (los nombres completos se resuelven en bookKeyFromFullName)
-  '1 Tim': '1_timoteo',
-  '2 Tim': '2_timoteo',
-  Lam: 'lamentaciones',
-};
-
-export const KEY_TO_NAME: Record<string, string> = {
-  genesis: 'Génesis',
-  exodo: 'Éxodo',
-  levitico: 'Levítico',
-  numeros: 'Números',
-  deuteronomio: 'Deuteronomio',
-  josue: 'Josué',
-  jueces: 'Jueces',
-  rut: 'Rut',
-  '1_samuel': '1 Samuel',
-  '2_samuel': '2 Samuel',
-  '1_reyes': '1 Reyes',
-  '2_reyes': '2 Reyes',
-  '1_cronicas': '1 Crónicas',
-  '2_cronicas': '2 Crónicas',
-  esdras: 'Esdras',
-  nehemias: 'Nehemías',
-  ester: 'Ester',
-  job: 'Job',
-  salmos: 'Salmos',
-  proverbios: 'Proverbios',
-  eclesiastes: 'Eclesiastés',
-  cantares: 'Cantares',
-  isaias: 'Isaías',
-  jeremias: 'Jeremías',
-  lamentaciones: 'Lamentaciones',
-  ezequiel: 'Ezequiel',
-  daniel: 'Daniel',
-  oseas: 'Oseas',
-  joel: 'Joel',
-  amos: 'Amós',
-  abdias: 'Abdías',
-  jonas: 'Jonás',
-  miqueas: 'Miqueas',
-  nahum: 'Nahúm',
-  habacuc: 'Habacuc',
-  sofonias: 'Sofonías',
-  hageo: 'Hageo',
-  zacarias: 'Zacarías',
-  malaquias: 'Malaquías',
-  mateo: 'Mateo',
-  marcos: 'Marcos',
-  lucas: 'Lucas',
-  juan: 'Juan',
-  hechos: 'Hechos',
-  romanos: 'Romanos',
-  '1_corintios': '1 Corintios',
-  '2_corintios': '2 Corintios',
-  galatas: 'Gálatas',
-  efesios: 'Efesios',
-  filipenses: 'Filipenses',
-  colosenses: 'Colosenses',
-  '1_tesalonicenses': '1 Tesalonicenses',
-  '2_tesalonicenses': '2 Tesalonicenses',
-  '1_timoteo': '1 Timoteo',
-  '2_timoteo': '2 Timoteo',
-  tito: 'Tito',
-  filemon: 'Filemón',
-  hebreos: 'Hebreos',
-  santiago: 'Santiago',
-  '1_pedro': '1 Pedro',
-  '2_pedro': '2 Pedro',
-  '1_juan': '1 Juan',
-  '2_juan': '2 Juan',
-  '3_juan': '3 Juan',
-  judas: 'Judas',
-  apocalipsis: 'Apocalipsis',
-};
-
-// El plan de nov. 2026 escribe muchos libros con el nombre completo ("Jeremías", "1 Pedro")
-function bookKeyFromFullName(name: string): string | undefined {
-  const plain = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-  const target = plain(name);
-  return Object.keys(KEY_TO_NAME).find((key) => plain(KEY_TO_NAME[key]!) === target);
-}
+// Los nombres y abreviaturas de los libros viven en bible-book-aliases (sin fs, lo usa el cliente)
+export { KEY_TO_NAME };
 
 // Parsea "He 14", "He 15:1-21", "Jos 23-24", "Jue 10:1-11:33", "1 Sam 1:1-2:11",
-// "1 Cró 20-22:1" y el libro solo ("2 Jn", "Abd"), que el plan usa para libros de un capítulo
+// "1 Cró 20-22:1" y el libro solo ("2 Jn", "Abd"), que el plan usa para libros de un capítulo.
+// Acepta cualquier abreviatura o nombre de libro (ver bible-book-aliases) y erratas de formato
+// de las guías: "2 Sam16", "Jeremías1-2", "Mar 4 1-20", "Mar 12 :1-27", "Mar 15) 21-47".
 export function parseReference(fullRef: string): {
   bookKey: string;
   bookName: string;
   chapters: BibleChapter[];
 } {
-  // El plan de 2024 trae a veces la abreviatura pegada al capítulo: "2 Sam16", "1 Sam17:55-18:30"
-  const normalized = fullRef.trim().replace(/([A-Za-zÀ-ÿ])(\d)/, '$1 $2');
-  const match = normalized.match(/^(\d+\s+[A-Za-zÀ-ÿ]+|[A-Za-zÀ-ÿ]+)(?:\s+(.+))?$/);
-  if (!match) throw new Error(`Referencia inválida: "${fullRef}"`);
-  const [, abbr, ref] = match;
-  const bookKey = ICT_TO_KEY[abbr!] ?? bookKeyFromFullName(abbr!);
-  if (!bookKey) throw new Error(`Abreviatura no reconocida: "${abbr}"`);
+  const split = splitReading(fullRef);
+  if (!split) throw new Error(`Referencia inválida: "${fullRef}"`);
+  const { book, reference: ref } = split;
+  const firstChapter = Number(/^\d+/.exec(ref)?.[0] ?? 0);
+  const bookKey = resolveBookKey(book, firstChapter);
+  if (!bookKey) throw new Error(`Abreviatura no reconocida: "${book}"`);
   const bookName = KEY_TO_NAME[bookKey] ?? bookKey;
   const bookData = loadBook(bookKey);
   const segments: Seg[] = ref
@@ -322,4 +116,19 @@ function loadBook(key: string): string[][] {
   const data = JSON.parse(readFileSync(p, 'utf-8')) as string[][];
   cache.set(key, data);
   return data;
+}
+
+// Comprueba que una lectura del plan se pueda cargar: libro reconocido y capítulos y
+// versículos que existen. Devuelve el motivo del fallo, o null si es válida.
+export function validateReading(fullRef: string): string | null {
+  try {
+    const { bookName, chapters } = parseReference(fullRef);
+    const missing = chapters.find((c) => c.verses.length === 0);
+    if (chapters.length === 0 || missing) {
+      return `${bookName} no tiene el capítulo o los versículos indicados`;
+    }
+    return null;
+  } catch (e) {
+    return (e as Error).message;
+  }
 }

@@ -227,6 +227,13 @@
     letter-spacing: .05em; margin-bottom: 4px;
   }
   .day-card .readings { color: var(--muted); line-height: 1.7; }
+  .day-card .reading-input {
+    width: 100%;
+    margin: 0 0 4px;
+    padding: 4px 6px;
+    font-size: 12px;
+  }
+  .status.error { white-space: pre-line; }
 
   .plan-badge {
     display: inline-flex; align-items: center; gap: 6px;
@@ -493,19 +500,29 @@ async function analyzeImage() {
   }
 }
 
+// Todos los días, con las lecturas editables: si la subida marca alguna lectura como
+// inválida (p. ej. "Jl 31"), se corrige aquí mismo y se vuelve a subir.
 function showDaysPreview(days) {
   document.getElementById('planBadge').textContent = `✓ ${days.length} días`;
   const grid = document.getElementById('daysGrid');
-  grid.innerHTML = days.slice(0, 6).map(d => `
-    <div class="day-card">
-      <div class="day-num">Día ${d.day}</div>
-      <div class="readings">${d.reading_1}<br>${d.reading_2}<br>${d.reading_3}</div>
-    </div>
-  `).join('') + (days.length > 6 ? `
-    <div class="day-card" style="display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px;">
-      +${days.length - 6} días más...
-    </div>
-  ` : '');
+  grid.innerHTML = '';
+  days.forEach(d => {
+    const card = document.createElement('div');
+    card.className = 'day-card';
+    const title = document.createElement('div');
+    title.className = 'day-num';
+    title.textContent = `Día ${d.day}`;
+    card.appendChild(title);
+    ['reading_1', 'reading_2', 'reading_3'].forEach(field => {
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'reading-input';
+      input.value = d[field] || '';
+      input.addEventListener('input', () => { d[field] = input.value.trim(); });
+      card.appendChild(input);
+    });
+    grid.appendChild(card);
+  });
   document.getElementById('resultSection').style.display = 'block';
 }
 

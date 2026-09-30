@@ -40,6 +40,17 @@ describe('parseBibleReference', () => {
     expect(parseBibleReference('1 crónicas 2', books)?.bookKey).toBe('1chronicles');
   });
 
+  it('acepta las abreviaturas de la RVR, la NTV y las guías del ICT', () => {
+    expect(parseBibleReference('Jn 3:16', books)).toMatchObject({
+      bookKey: 'john',
+      verseStart: 16,
+    });
+    expect(parseBibleReference('1 Jn 4:8', books)?.bookKey).toBe('1john');
+    expect(parseBibleReference('Salm 23', books)?.bookKey).toBe('psalms');
+    expect(parseBibleReference('Gn. 1', books)?.bookKey).toBe('genesis');
+    expect(parseBibleReference('1 Cró 2', books)?.bookKey).toBe('1chronicles');
+  });
+
   it('ignora texto que no es una referencia válida', () => {
     expect(parseBibleReference('salmos', books)).toBeNull();
     expect(parseBibleReference('amor 3', books)).toBeNull();

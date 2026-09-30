@@ -1,5 +1,7 @@
 // Utilidades puras (sin fs) para reconocer en el buscador referencias como "salmos 145",
-// "Juan 3:16", "1 juan 4 7-8" o "gen 1", y llevar directamente al capítulo.
+// "Juan 3:16", "1 juan 4 7-8", "Jn 3:16" o "gen 1", y llevar directamente al capítulo.
+
+import { KEY_TO_NAME, resolveBookKey } from './bible-book-aliases';
 
 export interface ReferenceBook {
   key: string;
@@ -38,7 +40,9 @@ export function parseBibleReference(
     .replace(/[̀-ͯ]/g, '')
     .toLowerCase()
     .trim()
-    .replace(/\s+/g, ' ');
+    .replace(/([a-z])\./g, '$1 ') // "Gn. 1" -> "gn 1"
+    .replace(/\s+/g, ' ')
+    .trim();
   const match = REFERENCE_REGEX.exec(cleaned);
   if (!match) return null;
 
@@ -46,9 +50,12 @@ export function parseBibleReference(
   const bookQuery = compact(bookPart!);
   if (bookQuery.replace(/\d/g, '').length < 2) return null;
 
-  // Nombre exacto primero; si no, el primer libro (en orden canónico) que empieza así.
+  // Cualquier abreviatura conocida ("Jn", "Mt", "Stg", "1 Sm"); si no, el primer libro
+  // (en orden canónico) cuyo nombre empieza así ("jua", "sal").
+  const aliasKey = resolveBookKey(bookPart!, Number(chapterPart));
+  const aliasName = aliasKey ? compact(KEY_TO_NAME[aliasKey]!) : null;
   const book =
-    books.find((b) => compact(b.nameEs) === bookQuery) ??
+    (aliasName && books.find((b) => compact(b.nameEs) === aliasName)) ||
     books.find((b) => compact(b.nameEs).startsWith(bookQuery));
   if (!book) return null;
 

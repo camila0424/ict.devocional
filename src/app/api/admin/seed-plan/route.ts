@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { validateReading } from '@/lib/bible-books';
+import { splitReading } from '@/lib/bible-book-aliases';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -26,20 +28,21 @@ type Body = {
   entries: EntryInput[];
 };
 
-// Splits "He 14", "1 Sam 1:1-2:11", "Salm 42" into { bookAbbr, reference }
-// so DevotionalClient can reassemble "${bookAbbr} ${reference}" correctly.
-function splitReading(raw: string): { bookAbbr: string; reference: string } {
-  const parts = raw.trim().split(' ');
-  if (parts[0] && /^\d$/.test(parts[0])) {
-    return {
-      bookAbbr: `${parts[0]} ${parts[1] ?? ''}`.trim(),
-      reference: parts.slice(2).join(' '),
-    };
-  }
-  return {
-    bookAbbr: parts[0] ?? '',
-    reference: parts.slice(1).join(' '),
-  };
+// La imagen trae a veces las tres lecturas del día en un solo campo: "Ap 1 / Neh 1-2 / Sal 96"
+function readingsOf(entry: EntryInput): string[] {
+  return entry.readings
+    .flatMap((r) => r.split('/'))
+    .map((r) => r.trim())
+    .filter(Boolean);
+}
+
+// Separa "He 14", "1 Sam 1:1-2:11", "Salm 42" en { bookAbbr, reference } (corrigiendo erratas
+// como "Mar 4 1-20") para que DevotionalClient pueda recomponer "${bookAbbr} ${reference}".
+function toReadingFields(raw: string): { bookAbbr: string; reference: string } {
+  const split = splitReading(raw);
+  return split
+    ? { bookAbbr: split.book, reference: split.reference }
+    : { bookAbbr: raw, reference: '' };
 }
 
 export async function POST(req: NextRequest) {
@@ -64,6 +67,24 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // No se guarda nada si alguna lectura no se podría abrir en la app
+  const invalid = entries.flatMap((e) =>
+    readingsOf(e).flatMap((raw) => {
+      const { bookAbbr, reference } = toReadingFields(raw);
+      const error = validateReading(`${bookAbbr} ${reference}`.trim());
+      return error ? [`Día ${e.day}: "${raw}" → ${error}`] : [];
+    }),
+  );
+  if (invalid.length > 0) {
+    return NextResponse.json(
+      {
+        error: `Hay ${invalid.length} lectura(s) que la app no puede abrir. Corrígelas y vuelve a subir:\n${invalid.join('\n')}`,
+        invalid,
+      },
+      { status: 422, headers: CORS },
+    );
+  }
+
   const plan = await prisma.devotionalPlan.upsert({
     where: { month_year: { month, year } },
     update: {
@@ -85,7 +106,8 @@ export async function POST(req: NextRequest) {
 
   for (const e of entries) {
     const date = new Date(year, month - 1, e.day);
-    const rawReadings = e.readings.join(', ');
+    const readings = readingsOf(e);
+    const rawReadings = readings.join(', ');
 
     const entry = await prisma.dailyEntry.upsert({
       where: { planId_dayNumber: { planId: plan.id, dayNumber: e.day } },
@@ -95,8 +117,8 @@ export async function POST(req: NextRequest) {
 
     await prisma.reading.deleteMany({ where: { dailyEntryId: entry.id } });
     await prisma.reading.createMany({
-      data: e.readings.map((ref, i) => {
-        const { bookAbbr, reference } = splitReading(ref);
+      data: readings.map((ref, i) => {
+        const { bookAbbr, reference } = toReadingFields(ref);
         return {
           dailyEntryId: entry.id,
           order: i + 1,

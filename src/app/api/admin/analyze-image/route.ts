@@ -58,11 +58,15 @@ Responde SOLO con JSON válido, sin texto adicional ni backticks:
   "month_num": 5,
   "year": 2026,
   "days": [
-    { "day": 1, "reading_1": "He 14", "reading_2": "Jos 22", "reading_3": "Job 31" }
+    { "day": 1, "reading_1": "Hch 14", "reading_2": "Jos 22", "reading_3": "Job 31" }
   ]
 }
 
-Usa las abreviaturas exactas de la imagen. Extrae TODOS los días.`,
+Reglas:
+- Cada día tiene 3 lecturas separadas por "/" en la imagen: pon cada una en su campo, sin el "/".
+- Copia cada lectura tal cual (libro, capítulo, ":" y "-"), con las abreviaturas exactas de la imagen. No la traduzcas ni la completes.
+- Si una lectura es solo el nombre de un libro (por ejemplo "Abd", "2 Jn", "Filemón"), cópiala sin capítulo.
+- Extrae TODOS los días.`,
             },
           ],
         },
