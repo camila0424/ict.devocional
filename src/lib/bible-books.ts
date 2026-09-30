@@ -147,6 +147,10 @@ export const ICT_TO_KEY: Record<string, string> = {
   St: 'santiago',
   Jds: 'judas',
   Judas: 'judas', // el plan de sept. 2026 escribe el nombre completo
+  // Abreviaturas del plan de nov. 2026 (los nombres completos se resuelven en bookKeyFromFullName)
+  '1 Tim': '1_timoteo',
+  '2 Tim': '2_timoteo',
+  Lam: 'lamentaciones',
 };
 
 export const KEY_TO_NAME: Record<string, string> = {
@@ -218,6 +222,13 @@ export const KEY_TO_NAME: Record<string, string> = {
   apocalipsis: 'Apocalipsis',
 };
 
+// El plan de nov. 2026 escribe muchos libros con el nombre completo ("Jeremías", "1 Pedro")
+function bookKeyFromFullName(name: string): string | undefined {
+  const plain = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const target = plain(name);
+  return Object.keys(KEY_TO_NAME).find((key) => plain(KEY_TO_NAME[key]!) === target);
+}
+
 // Parsea "He 14", "He 15:1-21", "Jos 23-24", "Jue 10:1-11:33", "1 Sam 1:1-2:11",
 // "1 Cró 20-22:1" y el libro solo ("2 Jn", "Abd"), que el plan usa para libros de un capítulo
 export function parseReference(fullRef: string): {
@@ -230,7 +241,7 @@ export function parseReference(fullRef: string): {
   const match = normalized.match(/^(\d+\s+[A-Za-zÀ-ÿ]+|[A-Za-zÀ-ÿ]+)(?:\s+(.+))?$/);
   if (!match) throw new Error(`Referencia inválida: "${fullRef}"`);
   const [, abbr, ref] = match;
-  const bookKey = ICT_TO_KEY[abbr!];
+  const bookKey = ICT_TO_KEY[abbr!] ?? bookKeyFromFullName(abbr!);
   if (!bookKey) throw new Error(`Abreviatura no reconocida: "${abbr}"`);
   const bookName = KEY_TO_NAME[bookKey] ?? bookKey;
   const bookData = loadBook(bookKey);
