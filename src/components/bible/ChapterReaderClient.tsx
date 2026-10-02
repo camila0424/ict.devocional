@@ -19,6 +19,8 @@ import {
 import { cn } from '@/lib/utils';
 import { formatVerseParam } from '@/lib/bible-verse-range';
 import { VersionSwitcher } from '@/components/bible/VersionSwitcher';
+import { DictionaryLookup } from '@/components/dictionary/DictionaryLookup';
+import { DictionarySheet } from '@/components/dictionary/DictionarySheet';
 import { VerseNotesPanel, type VerseNoteEntry } from '@/components/bible/VerseNotesPanel';
 import { CHAPTER_NOTE_TITLE, CHAPTER_NOTE_VERSE } from '@/lib/note-source';
 import type { BibleVersion } from '@/lib/bible-reader';
@@ -58,6 +60,7 @@ export function ChapterReaderClient({
   const [togglingSave, setTogglingSave] = useState(false);
   const [chapterNotesOpen, setChapterNotesOpen] = useState(false);
   const didScrollToInitial = useRef(false);
+  const [dictionaryWord, setDictionaryWord] = useState<string | null>(null);
 
   const hasPrev = chapterIndex > 0;
   const hasNext = chapterIndex < chapterCount - 1;
@@ -523,7 +526,15 @@ export function ChapterReaderClient({
                 onDelete={deleteNote}
               />
             )}
+
+            {hasSelection && !chapterNotesOpen && <DictionaryLookup onSearch={setDictionaryWord} />}
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {dictionaryWord && (
+          <DictionarySheet word={dictionaryWord} onClose={() => setDictionaryWord(null)} />
         )}
       </AnimatePresence>
     </div>

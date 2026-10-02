@@ -3,11 +3,12 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronRight, X, PlayCircle } from 'lucide-react';
+import { CalendarDays, ChevronDown, ChevronRight, X, PlayCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LevelCard } from '@/components/ui/LevelCard';
 import { StreakCard } from '@/components/streak/StreakCard';
 import { getFraseDelDia } from '@/constants/phrases';
+import { PlanDayList } from '@/app/(app)/plan/PlanDayList';
 
 type Props = {
   userName: string;
@@ -28,6 +29,12 @@ type Props = {
   visionText?: string | null;
   strategyTitle?: string | null;
   strategyText?: string | null;
+  planEntries: {
+    dayNumber: number;
+    rawReadings: string;
+    readings: { bookFull: string; reference: string }[];
+    completed: boolean;
+  }[];
 };
 
 const WEEK_LABELS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
@@ -53,8 +60,11 @@ export function HomeClient({
   visionText,
   strategyTitle,
   strategyText,
+  planEntries,
 }: Props) {
   const [videoOpen, setVideoOpen] = useState(false);
+  const [planOpen, setPlanOpen] = useState(false);
+  const planCompleted = planEntries.filter((e) => e.completed).length;
   const daysInMonth = new Date(year, month, 0).getDate();
   const firstWeekday = new Date(year, month - 1, 1).getDay();
   const monthOffset = firstWeekday === 0 ? 6 : firstWeekday - 1;
@@ -243,6 +253,53 @@ export function HomeClient({
           })}
         </div>
       </motion.div>
+
+      {/* Plan del mes (desplegable, cerrado por defecto) */}
+      {planEntries.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5, duration: 0.3 }}
+          className="border-border bg-surface rounded-2xl border"
+        >
+          <button
+            type="button"
+            onClick={() => setPlanOpen((open) => !open)}
+            aria-expanded={planOpen}
+            aria-controls="home-month-plan"
+            className="flex w-full items-center gap-3 p-4 text-left"
+          >
+            <CalendarDays size={20} className="text-primary shrink-0" />
+            <span className="min-w-0 flex-1">
+              <span className="block font-bold">Plan de {monthLabel}</span>
+              <span className="text-muted block text-xs">
+                {planCompleted} de {planEntries.length} días completados
+              </span>
+            </span>
+            <ChevronDown
+              size={18}
+              className={cn('text-muted shrink-0 transition-transform', planOpen && 'rotate-180')}
+            />
+          </button>
+          <AnimatePresence initial={false}>
+            {planOpen && (
+              <motion.div
+                id="home-month-plan"
+                key="plan-content"
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.25 }}
+                className="overflow-hidden"
+              >
+                <div className="px-4 pb-4">
+                  <PlanDayList entries={planEntries} today={day} month={month} year={year} />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+      )}
 
       {/* Modal: Consejos para tu devocional */}
       <AnimatePresence>

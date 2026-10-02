@@ -12,6 +12,7 @@ import { Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Strings } from '@/constants/strings';
+import { useFirstVisit } from '@/hooks/useFirstVisit';
 
 const loginSchema = z.object({
   email: z.string().email('Correo inválido'),
@@ -23,6 +24,7 @@ type LoginForm = z.infer<typeof loginSchema>;
 export default function LoginPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
+  const { isFirstVisit, markSeen } = useFirstVisit();
 
   const {
     register,
@@ -42,6 +44,7 @@ export default function LoginPage() {
       return;
     }
 
+    markSeen();
     router.push('/');
     router.refresh();
   };
@@ -150,7 +153,11 @@ export default function LoginPage() {
         ¿No tienes cuenta?{' '}
         <Link
           href="/register"
-          className="font-semibold text-[var(--color-primary)] hover:underline"
+          onClick={markSeen}
+          className={cn(
+            'inline-block font-semibold text-[var(--color-primary)] hover:underline',
+            isFirstVisit && 'motion-safe:animate-heartbeat',
+          )}
         >
           Crear cuenta
         </Link>

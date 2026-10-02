@@ -32,8 +32,8 @@ export const Strings = {
   },
   tabs: {
     home: 'Inicio',
-    plan: 'Plan',
     biblia: 'Biblia',
+    diccionario: 'Diccionario',
     progress: 'Progreso',
     profile: 'Perfil',
   },
