@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -10,6 +10,7 @@ import {
   type DictionaryEntry,
   type DictionaryId,
 } from '@/lib/dictionary';
+import { extraWordCount, summarizeEntry } from '@/lib/dictionary-summary';
 
 export type DictionarySource = 'all' | DictionaryId;
 
@@ -41,7 +42,7 @@ function useDictionarySearch(query: string, source: DictionarySource) {
           wanted.map(async (d) => ({
             id: d.id,
             name: d.name,
-            entries: searchDictionary(await loadDictionary(d.id), q),
+            entries: searchDictionary(await loadDictionary(d.id, q), q),
           })),
         );
         if (cancelled) return;
@@ -63,27 +64,85 @@ function useDictionarySearch(query: string, source: DictionarySource) {
   return { groups, searchedQuery, loading, failed };
 }
 
-const COLLAPSED_LENGTH = 420;
+const INITIAL_VISIBLE = 5;
 
 function EntryCard({ entry }: { entry: DictionaryEntry }) {
   const [expanded, setExpanded] = useState(false);
-  const isLong = entry.d.length > COLLAPSED_LENGTH;
-  const text = expanded || !isLong ? entry.d : `${entry.d.slice(0, COLLAPSED_LENGTH).trimEnd()}…`;
+  const summary = useMemo(() => summarizeEntry(entry), [entry]);
+  const extraWords = useMemo(() => extraWordCount(entry), [entry]);
+  const hasMore = entry.d.trim() !== summary.text.trim();
 
   return (
     <article className="border-border bg-surface rounded-2xl border p-4">
       <h3 className="mb-1.5 text-base font-bold">{entry.t}</h3>
-      <p className="text-sm leading-relaxed break-words whitespace-pre-line">{text}</p>
-      {isLong && (
+
+      {summary.words.length > 0 ? (
+        <ul className="flex flex-col gap-1 text-sm leading-snug">
+          {summary.words.map(({ word, gloss }) => (
+            <li key={word}>
+              <span className="font-semibold text-[var(--color-primary)] italic">{word}</span>
+              <span className="text-muted"> · </span>
+              {gloss}
+            </li>
+          ))}
+          {extraWords > 0 && !expanded && (
+            <li className="text-muted">y {extraWords} más en la definición completa</li>
+          )}
+        </ul>
+      ) : (
+        <p className="text-sm leading-relaxed break-words">{summary.text}</p>
+      )}
+
+      {hasMore && (
         <button
           type="button"
           onClick={() => setExpanded((v) => !v)}
+          aria-expanded={expanded}
           className="mt-2 text-sm font-semibold text-[var(--color-primary)]"
         >
-          {expanded ? 'Ver menos' : 'Leer más'}
+          {expanded ? 'Ocultar definición completa' : 'Ver definición completa'}
         </button>
       )}
+
+      {expanded && (
+        <p className="border-border mt-3 border-t pt-3 text-sm leading-relaxed break-words whitespace-pre-line">
+          {entry.d}
+        </p>
+      )}
     </article>
+  );
+}
+
+function ResultGroup({
+  name,
+  entries,
+  showName,
+}: {
+  name: string;
+  entries: DictionaryEntry[];
+  showName: boolean;
+}) {
+  const [showAll, setShowAll] = useState(false);
+  const visible = showAll ? entries : entries.slice(0, INITIAL_VISIBLE);
+
+  return (
+    <section className="flex flex-col gap-2">
+      {showName && (
+        <h2 className="text-muted px-1 text-xs font-bold tracking-wide uppercase">{name}</h2>
+      )}
+      {entries.length === 0
+        ? showName && <p className="text-muted px-1 text-sm">Sin resultados.</p>
+        : visible.map((entry, i) => <EntryCard key={`${entry.t}-${i}`} entry={entry} />)}
+      {entries.length > INITIAL_VISIBLE && !showAll && (
+        <button
+          type="button"
+          onClick={() => setShowAll(true)}
+          className="text-sm font-semibold text-[var(--color-primary)]"
+        >
+          Ver los {entries.length - INITIAL_VISIBLE} resultados restantes
+        </button>
+      )}
+    </section>
   );
 }
 
@@ -156,16 +215,12 @@ export function DictionaryResults({ query, source }: { query: string; source: Di
   return (
     <div className={cn('flex flex-col gap-5 transition-opacity', loading && 'opacity-60')}>
       {groups.map((group) => (
-        <section key={group.id} className="flex flex-col gap-2">
-          {source === 'all' && (
-            <h2 className="text-muted px-1 text-xs font-bold tracking-wide uppercase">
-              {group.name}
-            </h2>
-          )}
-          {group.entries.length === 0
-            ? source === 'all' && <p className="text-muted px-1 text-sm">Sin resultados.</p>
-            : group.entries.map((entry, i) => <EntryCard key={`${entry.t}-${i}`} entry={entry} />)}
-        </section>
+        <ResultGroup
+          key={group.id}
+          name={group.name}
+          entries={group.entries}
+          showName={source === 'all'}
+        />
       ))}
     </div>
   );

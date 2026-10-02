@@ -33,41 +33,26 @@ async function getHomeData(userId: string) {
   let visionText: string | null = null;
   let strategyTitle: string | null = null;
   let strategyText: string | null = null;
-  let planEntries: {
-    dayNumber: number;
-    rawReadings: string;
-    readings: { bookFull: string; reference: string }[];
-    completed: boolean;
-  }[] = [];
 
   try {
-    const [streakRaw, todayEntry, progressRows, totalCompletedRaw, plan, monthEntries] =
-      await Promise.all([
-        prisma.streak.findUnique({ where: { userId } }),
-        prisma.dailyEntry.findFirst({
-          where: { plan: { month, year }, dayNumber: day },
-          include: { responses: { where: { userId } } },
-        }),
-        prisma.userProgress.findMany({
-          where: { userId, date: { gte: new Date(year, month - 1, 1) } },
-          select: { date: true, completed: true },
-        }),
-        prisma.userProgress.count({
-          where: { userId, completed: true },
-        }),
-        prisma.devotionalPlan.findUnique({
-          where: { month_year: { month, year } },
-          select: { visionTitle: true, visionText: true, strategyTitle: true, strategyText: true },
-        }),
-        prisma.dailyEntry.findMany({
-          where: { plan: { month, year } },
-          include: {
-            readings: { orderBy: { order: 'asc' } },
-            responses: { where: { userId }, select: { completedAt: true } },
-          },
-          orderBy: { dayNumber: 'asc' },
-        }),
-      ]);
+    const [streakRaw, todayEntry, progressRows, totalCompletedRaw, plan] = await Promise.all([
+      prisma.streak.findUnique({ where: { userId } }),
+      prisma.dailyEntry.findFirst({
+        where: { plan: { month, year }, dayNumber: day },
+        include: { responses: { where: { userId } } },
+      }),
+      prisma.userProgress.findMany({
+        where: { userId, date: { gte: new Date(year, month - 1, 1) } },
+        select: { date: true, completed: true },
+      }),
+      prisma.userProgress.count({
+        where: { userId, completed: true },
+      }),
+      prisma.devotionalPlan.findUnique({
+        where: { month_year: { month, year } },
+        select: { visionTitle: true, visionText: true, strategyTitle: true, strategyText: true },
+      }),
+    ]);
 
     const streakState = {
       current: streakRaw?.current ?? 0,
@@ -107,12 +92,6 @@ async function getHomeData(userId: string) {
     visionText = plan?.visionText ?? null;
     strategyTitle = plan?.strategyTitle ?? null;
     strategyText = plan?.strategyText ?? null;
-    planEntries = monthEntries.map((e) => ({
-      dayNumber: e.dayNumber,
-      rawReadings: e.rawReadings,
-      readings: e.readings.map((r) => ({ bookFull: r.bookFull, reference: r.reference })),
-      completed: e.responses[0]?.completedAt != null,
-    }));
   } catch {
     // DB unavailable — page renders with empty state
   }
@@ -129,7 +108,6 @@ async function getHomeData(userId: string) {
     visionText,
     strategyTitle,
     strategyText,
-    planEntries,
   };
 }
 

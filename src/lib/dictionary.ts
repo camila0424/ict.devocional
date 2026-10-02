@@ -1,5 +1,5 @@
-// Diccionarios bíblicos: se cargan bajo demanda desde /diccionario/<id>.json (generados por
-// scripts/build-dictionary.mjs) y se buscan por término, ignorando tildes y plurales simples.
+// Diccionarios bíblicos: se cargan bajo demanda desde /diccionario/<id>/<letra>.json (generados
+// por scripts/build-dictionary.mjs). Al buscar solo se descarga la letra inicial de la palabra.
 import { normalizeBibleText, stem } from '@/lib/bible-search-text';
 
 export const DICTIONARIES = [
@@ -9,19 +9,25 @@ export const DICTIONARIES = [
 
 export type DictionaryId = (typeof DICTIONARIES)[number]['id'];
 
-export type DictionaryEntry = { t: string; d: string };
+// `k` son alias: otros términos que remiten a esta entrada ("Amor" → "Amar, amor")
+export type DictionaryEntry = { t: string; d: string; k?: string[] };
 
-type IndexedDictionary = {
+export type IndexedDictionary = {
   entries: DictionaryEntry[];
-  // clave normalizada (título completo o cada parte separada por coma) → posiciones
+  // clave normalizada (título, cada parte separada por coma, alias) → posiciones
   byKey: Map<string, number[]>;
 };
 
 const MAX_RESULTS = 40;
 const MIN_PREFIX_LENGTH = 3;
-const STUB_PATTERN = /^\(?(véase|véanse|ver)\b/i;
 
-const cache = new Map<DictionaryId, Promise<IndexedDictionary>>();
+const cache = new Map<string, Promise<IndexedDictionary>>();
+
+// Archivo (letra) donde está una palabra; lo que no empieza por a-z va a "_".
+export function shardLetter(word: string): string {
+  const first = normalizeBibleText(word).charAt(0);
+  return /^[a-z]$/.test(first) ? first : '_';
+}
 
 function addKey(byKey: Map<string, number[]>, key: string, index: number) {
   if (!key) return;
@@ -35,49 +41,37 @@ function buildIndex(entries: DictionaryEntry[]): IndexedDictionary {
   entries.forEach((entry, index) => {
     addKey(byKey, normalizeBibleText(entry.t), index);
     for (const part of entry.t.split(',')) addKey(byKey, normalizeBibleText(part), index);
+    for (const alias of entry.k ?? []) addKey(byKey, normalizeBibleText(alias), index);
   });
   return { entries, byKey };
 }
 
-export function loadDictionary(id: DictionaryId): Promise<IndexedDictionary> {
-  let promise = cache.get(id);
+export function loadDictionary(id: DictionaryId, word: string): Promise<IndexedDictionary> {
+  const letter = shardLetter(word);
+  const cacheKey = `${id}/${letter}`;
+  let promise = cache.get(cacheKey);
   if (!promise) {
-    promise = fetch(`/diccionario/${id}.json`)
+    promise = fetch(`/diccionario/${id}/${letter}.json`)
       .then((res) => {
-        if (!res.ok) throw new Error(`No se pudo cargar el diccionario ${id}`);
+        if (res.status === 404) return [] as DictionaryEntry[]; // ningún término con esa letra
+        if (!res.ok) throw new Error(`No se pudo cargar el diccionario ${cacheKey}`);
         return res.json() as Promise<DictionaryEntry[]>;
       })
       .then(buildIndex)
       .catch((error) => {
-        cache.delete(id); // permite reintentar
+        cache.delete(cacheKey); // permite reintentar
         throw error;
       });
-    cache.set(id, promise);
+    cache.set(cacheKey, promise);
   }
   return promise;
 }
 
-// Posiciones cuyo término coincide exactamente con la clave (o con su raíz).
+// Posiciones cuyo término coincide exactamente con la clave (o con su singular/plural).
 function lookup(dict: IndexedDictionary, key: string): number[] {
   const found = new Set<number>(dict.byKey.get(key) ?? []);
-  const keyStem = stem(key);
-  for (const candidate of [keyStem, `${key}s`, `${key}es`]) {
+  for (const candidate of [stem(key), `${key}s`, `${key}es`]) {
     for (const index of dict.byKey.get(candidate) ?? []) found.add(index);
-  }
-  return [...found];
-}
-
-// "Véanse AMAR, AMOR." / "Ver ANIMALES" → posiciones de los términos a los que remite.
-function resolveStub(dict: IndexedDictionary, body: string): number[] {
-  const targets = body
-    .replace(STUB_PATTERN, '')
-    .replace(/^\s*(también|tambien)\b/i, '')
-    .split(/[;,]|\by\b/)
-    .map((part) => normalizeBibleText(part.replace(/N[ºo]\s*\d+/g, '')))
-    .filter(Boolean);
-  const found = new Set<number>();
-  for (const target of targets) {
-    for (const index of dict.byKey.get(target) ?? []) found.add(index);
   }
   return [...found];
 }
@@ -103,35 +97,8 @@ export function searchDictionary(dict: IndexedDictionary, query: string): Dictio
   }
 
   const titleOf = (index: number) => dict.entries[index]?.t ?? '';
-  const ordered = [...ranked.entries()].sort(
-    (a, b) => a[1] - b[1] || titleOf(a[0]).localeCompare(titleOf(b[0]), 'es'),
-  );
-
-  // Las entradas que solo remiten a otra ("Véase AMAR") se sustituyen por la entrada real
-  const isStub = (entry: DictionaryEntry) =>
-    entry.d.length < 200 && !entry.d.includes('\n') && STUB_PATTERN.test(entry.d);
-  const result: DictionaryEntry[] = [];
-  const seen = new Set<number>();
-  const push = (index: number) => {
-    const entry = dict.entries[index];
-    if (!entry || seen.has(index)) return;
-    seen.add(index);
-    result.push(entry);
-  };
-  for (const [index] of ordered) {
-    const entry = dict.entries[index];
-    if (!entry) continue;
-    if (!isStub(entry)) {
-      push(index);
-      continue;
-    }
-    const targets = resolveStub(dict, entry.d).filter((target) => {
-      const targetEntry = dict.entries[target];
-      return !!targetEntry && !STUB_PATTERN.test(targetEntry.d);
-    });
-    if (targets.length) targets.forEach(push);
-    else push(index);
-  }
-
-  return result.slice(0, MAX_RESULTS);
+  return [...ranked.entries()]
+    .sort((a, b) => a[1] - b[1] || titleOf(a[0]).localeCompare(titleOf(b[0]), 'es'))
+    .slice(0, MAX_RESULTS)
+    .flatMap(([index]) => dict.entries[index] ?? []);
 }

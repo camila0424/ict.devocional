@@ -3,12 +3,13 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'motion/react';
-import { CalendarDays, ChevronDown, ChevronRight, X, PlayCircle } from 'lucide-react';
+import { CalendarDays, ChevronDown, ChevronRight, Loader2, X, PlayCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LevelCard } from '@/components/ui/LevelCard';
 import { StreakCard } from '@/components/streak/StreakCard';
 import { getFraseDelDia } from '@/constants/phrases';
 import { PlanDayList } from '@/app/(app)/plan/PlanDayList';
+import type { ApiResponse } from '@/types/api';
 
 type Props = {
   userName: string;
@@ -29,12 +30,13 @@ type Props = {
   visionText?: string | null;
   strategyTitle?: string | null;
   strategyText?: string | null;
-  planEntries: {
-    dayNumber: number;
-    rawReadings: string;
-    readings: { bookFull: string; reference: string }[];
-    completed: boolean;
-  }[];
+};
+
+type PlanEntry = {
+  dayNumber: number;
+  rawReadings: string;
+  readings: { bookFull: string; reference: string }[];
+  completed: boolean;
 };
 
 const WEEK_LABELS = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
@@ -60,11 +62,32 @@ export function HomeClient({
   visionText,
   strategyTitle,
   strategyText,
-  planEntries,
 }: Props) {
   const [videoOpen, setVideoOpen] = useState(false);
   const [planOpen, setPlanOpen] = useState(false);
-  const planCompleted = planEntries.filter((e) => e.completed).length;
+  // Las lecturas del mes se piden solo la primera vez que se abre el plan
+  const [planEntries, setPlanEntries] = useState<PlanEntry[] | null>(null);
+  const [planLoading, setPlanLoading] = useState(false);
+  const [planFailed, setPlanFailed] = useState(false);
+  const planCompleted = planEntries?.filter((e) => e.completed).length ?? 0;
+
+  async function togglePlan() {
+    const opening = !planOpen;
+    setPlanOpen(opening);
+    if (!opening || planEntries || planLoading) return;
+    setPlanLoading(true);
+    setPlanFailed(false);
+    try {
+      const res = await fetch('/api/plan/month');
+      const json = (await res.json()) as ApiResponse<PlanEntry[]>;
+      if (!json.success) throw new Error();
+      setPlanEntries(json.data);
+    } catch {
+      setPlanFailed(true);
+    } finally {
+      setPlanLoading(false);
+    }
+  }
   const daysInMonth = new Date(year, month, 0).getDate();
   const firstWeekday = new Date(year, month - 1, 1).getDay();
   const monthOffset = firstWeekday === 0 ? 6 : firstWeekday - 1;
@@ -255,51 +278,68 @@ export function HomeClient({
       </motion.div>
 
       {/* Plan del mes (desplegable, cerrado por defecto) */}
-      {planEntries.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5, duration: 0.3 }}
-          className="border-border bg-surface rounded-2xl border"
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5, duration: 0.3 }}
+        className="border-border bg-surface rounded-2xl border"
+      >
+        <button
+          type="button"
+          onClick={togglePlan}
+          aria-expanded={planOpen}
+          aria-controls="home-month-plan"
+          className="flex w-full items-center gap-3 p-4 text-left"
         >
-          <button
-            type="button"
-            onClick={() => setPlanOpen((open) => !open)}
-            aria-expanded={planOpen}
-            aria-controls="home-month-plan"
-            className="flex w-full items-center gap-3 p-4 text-left"
-          >
-            <CalendarDays size={20} className="text-primary shrink-0" />
-            <span className="min-w-0 flex-1">
-              <span className="block font-bold">Plan de {monthLabel}</span>
-              <span className="text-muted block text-xs">
-                {planCompleted} de {planEntries.length} días completados
-              </span>
+          <CalendarDays size={20} className="text-primary shrink-0" />
+          <span className="min-w-0 flex-1">
+            <span className="block font-bold">Plan de {monthLabel}</span>
+            <span className="text-muted block text-xs">
+              {planEntries
+                ? `${planCompleted} de ${planEntries.length} días completados`
+                : 'Toca para ver las lecturas de cada día'}
             </span>
-            <ChevronDown
-              size={18}
-              className={cn('text-muted shrink-0 transition-transform', planOpen && 'rotate-180')}
-            />
-          </button>
-          <AnimatePresence initial={false}>
-            {planOpen && (
-              <motion.div
-                id="home-month-plan"
-                key="plan-content"
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.25 }}
-                className="overflow-hidden"
-              >
-                <div className="px-4 pb-4">
+          </span>
+          <ChevronDown
+            size={18}
+            className={cn('text-muted shrink-0 transition-transform', planOpen && 'rotate-180')}
+          />
+        </button>
+        <AnimatePresence initial={false}>
+          {planOpen && (
+            <motion.div
+              id="home-month-plan"
+              key="plan-content"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              className="overflow-hidden"
+            >
+              <div className="px-4 pb-4">
+                {planLoading && (
+                  <div className="text-muted flex items-center justify-center gap-2 py-4 text-sm">
+                    <Loader2 size={16} className="animate-spin" /> Cargando…
+                  </div>
+                )}
+                {planFailed && (
+                  <p className="text-muted py-4 text-center text-sm">
+                    No se pudo cargar el plan. Ciérralo y vuelve a abrirlo.
+                  </p>
+                )}
+                {planEntries && planEntries.length === 0 && (
+                  <p className="text-muted py-4 text-center text-sm">
+                    El plan de este mes estará disponible pronto.
+                  </p>
+                )}
+                {planEntries && planEntries.length > 0 && (
                   <PlanDayList entries={planEntries} today={day} month={month} year={year} />
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
-      )}
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
 
       {/* Modal: Consejos para tu devocional */}
       <AnimatePresence>

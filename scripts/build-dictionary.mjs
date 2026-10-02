@@ -1,8 +1,8 @@
-// Convierte los PDF de data-source/diccionarios en public/diccionario/<id>.json
+// Convierte los PDF de data-source/diccionarios en public/diccionario/<id>/<letra>.json
 // Uso: node scripts/build-dictionary.mjs [id]   (sin id procesa todos)
 // Requiere `pdftotext` (poppler) en el PATH.
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
@@ -173,16 +173,62 @@ const SOURCES = {
   },
 };
 
+// Las remisiones ("Amor → Véanse AMAR, AMOR") se convierten en alias de la entrada real, así
+// no hace falta cargar otras letras al buscar. Las que no apuntan a nada se descartan.
+const SEE_PATTERN = /^\(?(véase|véanse|ver)\b/i;
+const isSee = (e) => e.d.length < 200 && !e.d.includes('\n') && SEE_PATTERN.test(e.d);
+const keysOf = (e) => [e.t, ...e.t.split(','), ...(e.k ?? [])].map(norm).filter(Boolean);
+
+function resolveSeeAlso(entries) {
+  const byKey = new Map();
+  for (const e of entries.filter((x) => !isSee(x))) {
+    for (const key of keysOf(e)) byKey.set(key, [...(byKey.get(key) ?? []), e]);
+  }
+  for (const stub of entries.filter(isSee)) {
+    const targets = stub.d
+      .replace(SEE_PATTERN, '')
+      .replace(/^\s*también\b/i, '')
+      .split(/[;,]|\by\b/)
+      .map((part) => norm(part.replace(/N[ºo]\s*\d+/g, '')))
+      .filter(Boolean);
+    for (const target of targets) {
+      for (const real of byKey.get(target) ?? []) {
+        if (!keysOf(real).includes(norm(stub.t))) (real.k ??= []).push(stub.t);
+      }
+    }
+  }
+  return entries.filter((e) => !isSee(e));
+}
+
+// Un archivo por letra inicial (de cualquiera de las claves de la entrada): al buscar solo se
+// descarga la letra de la palabra, no el diccionario entero.
+function writeShards(id, entries) {
+  const dir = path.join(OUT, id);
+  rmSync(dir, { recursive: true, force: true });
+  mkdirSync(dir, { recursive: true });
+  const shards = new Map();
+  for (const entry of entries) {
+    for (const letter of new Set(keysOf(entry).map((k) => (/^[a-z]/.test(k) ? k[0] : '_')))) {
+      shards.set(letter, [...(shards.get(letter) ?? []), entry]);
+    }
+  }
+  for (const [letter, list] of shards) {
+    writeFileSync(path.join(dir, letter + '.json'), JSON.stringify(list));
+  }
+  return shards.size;
+}
+
 const only = process.argv[2];
 mkdirSync(OUT, { recursive: true });
 const tmp = mkdtempSync(path.join(tmpdir(), 'dict-'));
 
 for (const [id, cfg] of Object.entries(SOURCES)) {
   if (only && only !== id) continue;
-  const txt = path.join(tmp, `${id}.txt`);
+  const txt = path.join(tmp, id + '.txt');
   execFileSync('pdftotext', ['-enc', 'UTF-8', path.join(SRC, cfg.file), txt]);
   const lines = readFileSync(txt, 'utf8').split(/\r?\n/);
-  const entries = cfg.parse(lines);
-  writeFileSync(path.join(OUT, `${id}.json`), JSON.stringify(entries));
-  console.log(`${id}: ${entries.length} entradas`);
+  const entries = resolveSeeAlso(cfg.parse(lines));
+  rmSync(path.join(OUT, id + '.json'), { force: true });
+  const files = writeShards(id, entries);
+  console.log(id + ': ' + entries.length + ' entradas en ' + files + ' archivos');
 }
